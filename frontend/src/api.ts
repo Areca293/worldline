@@ -10,6 +10,8 @@ export interface Article {
   source: { name: string; website_url: string }
   summary: string
   original_url: string
+  is_bookmarked: boolean
+  source_updated_at: string | null
   published_at: string | null
   collected_at: string
   is_sample: boolean
@@ -61,4 +63,39 @@ export function safeExternalUrl(url: string): string | undefined {
   } catch {
     return undefined
   }
+}
+
+export interface Session {
+  user: { id: number; username: string } | null
+  csrfToken: string
+}
+
+// Fetch a current token before writes, including anonymous login. Login rotates it.
+export async function write<T>(
+  path: string,
+  method: 'POST' | 'PUT' | 'DELETE',
+  body?: unknown,
+): Promise<T> {
+  const session = await get<Session>('auth/session/')
+  const response = await fetch(`/api/${path}`, {
+    method,
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': session.csrfToken,
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  if (!response.ok) throw new ApiError(response.status)
+  return response.json() as Promise<T>
+}
+
+export function timestampLabel(date: string): string {
+  return (
+    new Intl.DateTimeFormat('en', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'UTC',
+    }).format(new Date(date)) + ' UTC'
+  )
 }

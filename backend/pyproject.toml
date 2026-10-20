@@ -1,13 +1,16 @@
 [project]
 name = "worldline-api"
 version = "0.1.0"
-description = "An English reading home — M0 development API"
+description = "An English reading home with official feeds and private bookmarks"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+  "defusedxml>=0.7,<1",
   "Django>=5.2,<5.3",
   "djangorestframework>=3.16,<3.17",
+  "feedparser>=6.0.11,<7",
   "psycopg[binary]>=3.2,<4",
   "python-dotenv>=1.1,<2",
+  "urllib3>=2.6,<3",
 ]
 
 [dependency-groups]
@@ -16,6 +19,8 @@ dev = ["pytest>=8,<10", "pytest-django>=4.11,<5", "ruff>=0.12,<1"]
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
+addopts = "-m 'not browser'"
+markers = ["browser: opt-in real-browser acceptance against an isolated PostgreSQL test database"]
 
 [tool.ruff]
 line-length = 100

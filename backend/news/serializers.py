@@ -18,6 +18,7 @@ class SourceSerializer(serializers.ModelSerializer):
 class ArticleSerializer(serializers.ModelSerializer):
     topic = TopicSerializer(read_only=True)
     source = SourceSerializer(read_only=True)
+    is_bookmarked = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = Article
@@ -30,7 +31,9 @@ class ArticleSerializer(serializers.ModelSerializer):
             "summary",
             "original_url",
             "published_at",
+            "source_updated_at",
             "collected_at",
             "is_sample",
             "featured",
+            "is_bookmarked",
         ]

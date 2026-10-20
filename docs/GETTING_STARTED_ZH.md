@@ -1,6 +1,6 @@
 # 本地启动与学习路线
 
-这是 M0 的代码骨架，尚未完成 PostgreSQL 的运行验收；目前不是实时新闻产品。
+M1 已完成本地验收：可以浏览官方 RSS 内容、登录并收藏文章。更新仍需手动执行命令；尚未实现自动更新、AI 或公开部署。
 
 ## 你需要准备什么
 
@@ -21,10 +21,12 @@ docker info
 ```
 
 打开 VS Code 的“Open Folder”，选择 `worldline` 项目文件夹。按根目录 README 的
-“First start”操作：先启动数据库，再迁移并导入样例，然后分别启动后端和前端。
+“First start”操作：先启动数据库，再迁移并导入真实 RSS 内容，然后分别启动后端和前端。
 项目已经有本地 `.env`；首次配置示例的复制命令只需在 `.env` 不存在时执行，避免覆盖你后续的修改。
 
-## 2026-10-02 环境检查：为什么编辑器会飘红
+## 历史参考：2026-10-02 编辑器环境排查
+
+以下是当时的诊断。2026-10-20 已确认 Node、uv 和 Docker 可用；不必重复安装。
 
 这次检查确认 `frontend/node_modules` 和 `backend/.venv` 不存在；进度记录说明它们
 在上次清理时被删除。源码与两个依赖锁文件仍在，可以恢复依赖，无须重新生成项目。
@@ -111,12 +113,14 @@ test -f .env || cp .env.example .env
 docker compose up -d --wait db
 cd backend
 uv run python manage.py migrate
-uv run python manage.py seed_demo
-uv run python manage.py seed_demo
+uv run python manage.py seed_sources
+uv run python manage.py import_feeds
+uv run python manage.py import_feeds
 ```
 
 现有 `.env` 会保留。第二次导入应新增 0 篇文章，这用于验证重复运行不会重复插入。
-`migrate` 是根据代码创建/更新数据库表，`seed_demo` 是导入明确标记的学习样例。
+`migrate` 创建/更新数据库表；`seed_sources` 添加已核对的来源；`import_feeds` 手动更新真实内容。
+若两次更新期间来源发布了新内容，第二次可以合理新增；相同条目不会重复插入。
 
 ### 5. 分别启动前后端
 
@@ -143,7 +147,7 @@ npm run dev
 前端在 `frontend` 目录执行 `npm test`、`npm run build`；后端在 `backend` 目录
 执行 `uv run python manage.py check`、`uv run pytest`。完整验证命令见根 README。
 健康接口 http://127.0.0.1:8000/api/health/ 应返回 `database: connected`；还应确认
-首页能显示四篇 Sample 文章。
+首页能显示带来源和发布日期的真实内容，原有 Sample 文章默认隐藏。
 
 若仍有红线，打开 View → Problems（⌘⇧M），保留前几条的文件名、完整错误文字及
 来源（例如 TypeScript / Pylance），逐条排查。编辑器提示和终端测试结果都需要看；
@@ -158,18 +162,26 @@ npm run dev
 开发时 Vite 把 `/api/` 请求转发到 Django，所以浏览器只需要使用前端地址。
 TanStack Query 管理请求的加载、缓存和失败状态；React Router 管理首页和详情页路径。
 
-M0 不含产品用户登录、收藏、真实 RSS 或 AI。这些功能不会用假按钮或假结果冒充已完成。
+M1 的登录使用 Django 会话，收藏保存到 PostgreSQL，每条收藏都绑定登录用户。
+创建管理员：在 `backend` 执行 `uv run python manage.py createsuperuser`；随后可在
+http://127.0.0.1:8000/admin/ 的 Users 中创建非 staff 的普通账号。已有账号无需重建。
+网站右上角 Sign in 使用这些账号登录，Save story 保存，Saved stories 查看。
+不要把真实密码写进源码、文档或 Git。此版本没有公开注册，也没有默认测试账号。
+
+桌面/手机视口的完整浏览器测试：先准备 Playwright Chromium 或已安装的 Chrome，
+在 `backend` 执行 `E2E_BROWSER_CHANNEL=chrome uv run pytest -m browser -q`。
+测试使用单独数据库，自动清理，不会改动你的收藏。
 
 ## 一个可以自己做的小修改
 
-在 `frontend/src/App.tsx` 中找到 `A wider world.`，把它改成你自己的英文标题。
-保存后查看浏览器自动刷新，再尝试解释：为什么改标题不用修改 Django 或数据库？
+在 `frontend/src/account.tsx` 中找到 `Save story`，改成你喜欢的英文按钮文案。
+保存后观察页面，再解释：为什么改文案不影响数据库收藏？哪些前端/浏览器测试也需要同步调整？
 
 下一步尝试在 `frontend/src/styles.css` 中修改 `--accent` 的颜色。修改后运行
 `npm run build`，确认页面仍然可以编译。
 
 ## 验收标准
 
-数据库就绪后：首页显示四篇 Sample 文章；分类只显示对应内容；详情页能打开参考链接；
-页脚显示数据库已连接；重复执行 `seed_demo` 不增加记录；前后端测试通过。
+已验收：首页显示真实内容；分类只显示对应内容；详情显示来源时间并能跳转原文；
+刷新后收藏仍在；其他账号看不到或删不了你的收藏；相同 RSS 重复导入新增 0；前后端及浏览器测试通过。
 手机浏览器视觉检查和真实 iPhone Safari 测试是两件事，后者还没做。

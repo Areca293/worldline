@@ -3,52 +3,54 @@
 A mobile-first English reading home for technology, economy, finance and music.
 Worldline is a replaceable working name.
 
-**Status: M0 scaffold implemented; PostgreSQL acceptance is still pending.**
-The interface uses clearly labeled original sample copy, not live news. Real feeds,
-login, bookmarks, search, AI assistance and deployment are later milestones.
+**M1 is implemented and locally verified:** official RSS imports, attributed source
+excerpts, topic browsing, session sign-in and persistent private bookmarks. Updates
+are manual. Scheduled updates, search, AI, public hosting and iOS remain later work.
 
 ## Architecture
 
 ```text
 Browser → React / TypeScript / Vite → /api/ → Django REST Framework → PostgreSQL
+Manual import command → reviewed RSS endpoints → PostgreSQL
 ```
 
-The Vite development server proxies `/api/` to Django on port 8000. The browser
-does not connect to the database. There are no external API keys or AI calls.
-Production should serve the frontend and API from the same origin; this repository
-does not yet contain a production deployment configuration.
+Vite proxies `/api/` to Django on port 8000, preserving the browser's Host for
+same-origin CSRF checks. All data access goes through Django. There are no paid
+services or external API keys. Production must also use a same-origin deployment;
+this repository currently contains local development configuration only.
 
 ```text
-frontend/src/App.tsx      Pages, topic navigation and query states
-frontend/src/api.ts       API types, HTTP requests and safe external links
-frontend/src/styles.css   Responsive editorial layout
-backend/config/          Django settings and URL configuration
-backend/news/            Models, read-only API, admin, demo command and tests
-compose.yaml             Local PostgreSQL with a persistent named volume
-docs/                    Requirements, actual progress and learning notes
+frontend/src/App.tsx          Reading pages and topic navigation
+frontend/src/account.tsx      Sign-in, sign-out and bookmark controls
+frontend/src/api.ts           Typed API calls and CSRF-protected writes
+backend/news/models.py       Source, Topic, Article and Bookmark
+backend/news/feeds.py        Bounded download, parse and idempotent import
+backend/news/catalog.py      Reviewed source allowlist and usage notes
+backend/news/auth.py         Django session authentication
+backend/news/tests/          PostgreSQL, security and browser tests
+frontend/e2e/                Real-browser reading workflow
+compose.yaml                 Local persistent PostgreSQL
 ```
 
 ## Prerequisites
 
-- Node.js **24 LTS** and npm (Node version hint: `.nvmrc`).
-- [uv](https://docs.astral.sh/uv/getting-started/installation/); it manages Python **3.12** locally.
-- [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/), installed and running.
-- Git. VS Code is optional but recommended for editing.
+- Node.js **24 LTS**, npm and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+- Python **3.12**, managed by uv; do not modify macOS system Python.
+- [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/), running.
+- Git. VS Code setup is described in `docs/GETTING_STARTED_ZH.md`.
 
-Do not use the macOS system Python. No paid service, domain or AI key is needed.
+## Start locally
 
-## First start
-
-Run from this repository root:
+From the repository root:
 
 ```sh
 test -f .env || cp .env.example .env
 docker compose up -d --wait db
 ```
 
-`.env` is ignored by Git. Its example credentials are for local development only.
-The database port is bound to loopback, not the local network. If port 5432 is
-occupied, change `POSTGRES_PORT` in `.env`; Compose and Django read the same value.
+The local `.env` is ignored by Git. Example credentials are for local development.
+If port 5432 is occupied, change `POSTGRES_PORT` in `.env`; Compose and Django read
+that same value. Do not delete the existing database volume when upgrading.
 
 Backend terminal:
 
@@ -56,11 +58,12 @@ Backend terminal:
 cd backend
 uv sync --locked
 uv run python manage.py migrate
-uv run python manage.py seed_demo
+uv run python manage.py seed_sources
+uv run python manage.py import_feeds
 uv run python manage.py runserver 127.0.0.1:8000
 ```
 
-Frontend terminal, starting from the repository root:
+Frontend terminal, from the repository root:
 
 ```sh
 cd frontend
@@ -68,30 +71,57 @@ npm ci
 npm run dev
 ```
 
-Open [the local app](http://127.0.0.1:5173). Use `127.0.0.1` consistently.
-There should be four sample articles and an “API & database connected” footer.
-If a request fails, the interface shows a retry action; it never silently inserts
-hardcoded stories. Unknown publication dates remain unknown.
+Open [Worldline](http://127.0.0.1:5173). Use `127.0.0.1` consistently. If these
+servers are already running, do not start another copy on the same ports.
 
-`npm run build` produces static files. `npm run preview` only previews that build;
-it does **not** proxy Django. Use `npm run dev` for the local full-stack workflow.
+To refresh content later, run `uv run python manage.py import_feeds` from `backend`.
+Repeated imports update matching records and preserve their article IDs/bookmarks.
+One source failing does not block other sources or delete existing content.
 
-Optional Django admin:
+## Accounts and saved stories
+
+Create your local administrator interactively:
 
 ```sh
 cd backend
 uv run python manage.py createsuperuser
 ```
 
-Open [Django admin](http://127.0.0.1:8000/admin/). This is developer administration,
-not a product login or registration feature.
+Use [Django admin](http://127.0.0.1:8000/admin/) → Users to create normal reader
+accounts without staff/superuser permissions. Existing Django users can sign in
+at [the app login page](http://127.0.0.1:5173/login). Passwords are chosen locally;
+there is no default product password, automatic account creation or public registration.
+
+Select **Save story**, then **Saved stories**. Reloading retains your bookmarks.
+**Remove bookmark** removes only your own bookmark. Sign-out clears the client
+cache of personalized content. Anonymous requests cannot list or change bookmarks;
+user IDs supplied in query strings or bodies do not select another user's records.
+
+Sessions use Django's HttpOnly cookie. Login, logout and bookmark writes require
+CSRF protection. Login has a basic 10-per-minute IP throttle using Django's local
+cache; a shared throttle store and production hardening are needed before public deployment.
+
+## Sources and dates
+
+Initial feeds are NASA, BEA, Federal Reserve and Library of Congress music blog.
+See [source scope and usage notes](docs/CONTENT_SOURCES.md). Only feed excerpts are
+stored; no article-body scraping, photos, audio or AI-generated summaries.
+
+The all-topic view alternates across topics, ordering by source publication date
+within each topic. Topic views show their newest published items first. Unknown
+dates remain unknown, and older music posts keep their dates. This is a small
+selection of official institutional sources, not comprehensive news coverage.
+
+Django admin maintains sources and articles. A new feed URL must first be added
+to the reviewed allowlist in `backend/news/catalog.py`. Existing demo articles are
+preserved but excluded from the normal feed; `seed_demo` and
+`/api/articles/?samples=1` remain available for explicitly labeled learning samples.
 
 ## Verification
 
-With PostgreSQL running:
+With PostgreSQL running, from `backend`:
 
 ```sh
-cd backend
 uv run python manage.py check
 uv run python manage.py makemigrations --check --dry-run
 uv run ruff check .
@@ -99,65 +129,65 @@ uv run ruff format --check .
 uv run pytest
 ```
 
-The local PostgreSQL user must be able to create a test database. Compose's initial
-user can do this. Tests use a separate test database, not the normal article tables.
-Tests cover repeatable demo seeding, topic filtering, missing articles, read-only
-endpoints, empty results and safe handling of database failures.
+The PostgreSQL development user must have permission to create test databases.
+Compose's initial user has it. Pytest creates and destroys a separate test database;
+it does not run tests against normal reading data. Default tests cover RSS/Atom
+provenance, duplicate imports, invalid feeds, safe network targets, CSRF, session
+login, persistence and cross-user bookmark isolation.
+
+From `frontend`:
 
 ```sh
-cd frontend
 npm test
 npm run build
 ```
 
-Frontend tests cover unavailable services, empty results, unknown dates and unsafe
-external URL schemes. Browser-based checks and their limits are in `docs/PROGRESS.md`.
+For real-browser acceptance, install Chromium once with
+`cd frontend && npx playwright install chromium`, then run from `backend`:
+
+```sh
+uv run pytest -m browser -q
+# Alternatively, use an already-installed Google Chrome:
+E2E_BROWSER_CHANNEL=chrome uv run pytest -m browser -q
+```
+
+This test harness creates isolated test users and an original test story in
+Django's test database, starts a temporary Vite server, and exercises desktop and
+mobile Chromium viewports. Screenshots/results go to pytest's OS temporary folder.
+It does not modify your accounts or bookmarks. Mobile emulation is not an iPhone
+Safari device test. Do not run `npm run test:e2e` directly; the harness supplies its
+isolated API URL and temporary credentials.
 
 ```sh
 curl -f http://127.0.0.1:5173/api/health/
 curl -f http://127.0.0.1:5173/api/articles/
 ```
 
-Health must return `{"status":"ok","database":"connected","stage":"M0"}`.
-Health uses a real PostgreSQL query; it does not assert that migrations or feeds are
-up to date. Run migrations and check articles too. Run `seed_demo` twice: the
-second run must report zero created articles.
+Health returns `{"status":"ok","database":"connected","stage":"M1"}` after a real
+SQL query. It does not assert feed freshness; check source dates and import output.
+Actual evidence and outstanding limits are in `docs/PROGRESS.md`.
 
-## Stop and restart
+## Stop, restart and troubleshoot
 
-Stop the frontend/backend with Ctrl+C in their terminals. From the repository root:
+Stop frontend/backend with Ctrl+C in their terminals. Use `docker compose stop db`
+to stop PostgreSQL, then `docker compose up -d --wait db` to restart it. The named
+volume preserves data. `docker compose down -v` deletes that data and is not a
+normal restart step.
 
-```sh
-docker compose stop db
-# Later:
-docker compose up -d --wait db
-```
+- Database unavailable: check `docker compose ps` and `docker compose logs db`.
+- Missing tables: run migrations before starting Django.
+- Empty home: run `seed_sources` and `import_feeds`; samples are intentionally hidden.
+- A feed fails: the command reports the source and exits nonzero after processing
+  the remaining sources. Check its URL/availability; retry manually later.
+- Sign-in fails: use a locally created active Django user; keep frontend and API
+  on the documented origin. Do not disable CSRF to resolve a configuration problem.
+- `npm run preview` serves build files only and does not proxy the API. Use the dev
+  server for local full-stack work.
 
-The named volume preserves the database. `docker compose down -v` deletes that
-volume and its data; it is not part of the normal restart workflow.
+## Next milestones
 
-## Troubleshooting
-
-- **Command not found:** install the prerequisites, open a fresh terminal and check
-  `node --version`, `npm --version`, `uv --version` and `docker compose version`.
-- **Cannot connect to Docker:** launch Docker Desktop and wait until its engine is ready.
-- **Database connection refused:** run `docker compose ps` and `docker compose logs db`.
-  Check `.env` and port availability before starting Django.
-- **Missing tables:** run `uv run python manage.py migrate` from `backend`.
-- **Empty home:** run `uv run python manage.py seed_demo`; do not expect live RSS in M0.
-- **Frontend request failed:** verify both servers are running and inspect `/api/health/`.
-
-## Scope and content
-
-Sample text is written for this project. Reference links point to related public
-resources; those sites did not publish these sample headlines or descriptions.
-There are no copied articles, photos or generated news facts. `published_at` is
-nullable and is kept separate from `collected_at`.
-
-M1 will add approved RSS/Atom sources, stable import deduplication, login and private
-bookmarks. M2 adds scheduled updates, search, CI and deployment. M3 adds cited AI
-answers and language tools. See `docs/PROJECT_CONTEXT.md` for the full product plan.
-
-No repository has been published. An open-source license must be chosen before
-public release. The supplied context document is retained locally; review its
-personal/background sections before making a public repository.
+M2 adds scheduled updates/retries, last-success visibility, search, CI and HTTPS
+deployment. M3 adds cited AI search and language assistance. See
+`docs/PROJECT_CONTEXT.md` for product scope. No repository or website has been
+published by this work. Choose a license and review personal context documents
+before making the repository public.

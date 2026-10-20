@@ -1,5 +1,114 @@
 # 实际进度
 
+## M1 完成本地开发与验收（2026-10-20）
+
+**当前阶段：M1 已完成本地验收；M0 的数据库待验收项也已补齐。** 下方较早的
+“M0 未验收/环境缺失”记录保留为历史，不代表当前状态。未发布网站或 GitHub 仓库。
+
+### 功能与实现
+
+- 接入 NASA（Technology）、BEA（Economy）、Federal Reserve（Finance）、
+  Library of Congress In the Muse（Music）四个官方 RSS。使用范围和限制见
+  `CONTENT_SOURCES.md`，默认源属于美国官方机构，尚非全面、多地区新闻覆盖。
+- 新增 `seed_sources` / `import_feeds` 手动命令；管理后台可维护来源、分类、
+  启用状态和使用说明。已有配置不会被 seed_sources 覆盖。某来源失败时继续
+  处理其余来源，并以非零退出码报告失败；现有文章保留。
+- GUID/Atom ID + 规范化 URL + PostgreSQL 唯一约束去重；同源导入加数据库锁。
+  更新保持文章 ID、slug、首次收录时间及收藏；身份冲突跳过，避免错归来源。
+- 标题和 feed 简介转为纯文本，简介限 600 字符；不抓正文/图片/音频、不调用 AI。
+  修正了解析库自动将 Atom content 回退为 summary、将 published 回退为 updated
+  的行为；缺简介、缺日期时如实为空。DTD/外部实体、非公开地址、重定向被拒绝。
+- 首页跨领域交替排序，领域内按原始发布时间降序；详情区分发布、来源更新和收录
+  时间。正常信息流默认隐藏 M0 示例，但保留其数据和显式 samples=1 学习接口。
+- Django 会话登录/退出，包含匿名登录 CSRF 防护、HttpOnly cookie 和基础登录限流。
+  正式账号由本地管理员创建；未添加默认口令、自动创建真实账号或开放注册。
+- 收藏/取消收藏/收藏列表保存到 PostgreSQL；服务端始终使用当前用户，前端账号
+  切换清理个性化缓存。收藏和个性化文章响应禁用浏览器共享缓存。
+- 新增迁移 `0002_bookmark_alter_article_options_and_more`，未重置既有数据库。
+- Vite 升到兼容补丁 7.3.7，修复依赖审计报告的问题。新增 feedparser、urllib3、
+  defusedxml 与 Playwright，更新锁文件。未换技术栈。
+
+### 实际验证
+
+- 当前 Node 24.21.0、Python 3.12.15、uv 0.12.22、Docker Engine 29.8.1；
+  原 `worldline-db-1` PostgreSQL 17.9 容器健康。沙箱外数据库/网络访问通过审批执行。
+- 原 M0 基线：迁移无待执行项，seed_demo 连续两次新增 0，原 4 项 pytest 通过。
+- M1 迁移成功；真实导入 NASA 10、BEA 47、Federal Reserve 20、LOC 10，共 87 篇。
+  首次后的第二次导入新增 0；BEA 一条无有效原文 URL 的条目被安全跳过。
+  所有 87 篇都有来源发布时间。旧样例未删除。
+- 后端默认测试：**24 passed**，覆盖 RSS/Atom、重复导入、HTML/日期处理、失败隔离、
+  网络访问边界、登录/CSRF、限流、刷新会话、跨用户读取/取消收藏隔离及领域排序。
+- 前端：**6 passed**，覆盖失败/空数据、登录并收藏/取消、退出后的私人缓存清理、
+  请求失败不显示假成功及外链安全。
+- 独立数据库浏览器验收：`E2E_BROWSER_CHANNEL=chrome uv run pytest -m browser -q`。
+  **1 个 pytest 驱动测试通过，内含桌面和手机两个 Playwright 场景，2 passed**。
+  实际操作登录、收藏、刷新、收藏列表、切换第二个账号、返回首账号取消收藏及刷新。
+  无页面 JavaScript 错误；手机视口无页面级横向溢出。
+- 测试账号和原创测试文章只存在于 Django 自动创建/销毁的测试库；实际核查正常
+  数据库中 `browser-test-story` 为 0 条。浏览器截图/报告使用 OS 临时目录。
+- 实际 `http://127.0.0.1:5173/api/health/` 返回 connected / M1；文章 API 返回 87 条，
+  首页前四条覆盖四个领域且无样例。应用内浏览器已检查真实内容首页。
+- Django system check、迁移一致性检查、Ruff、TypeScript/Vite build 通过。
+  升级后 npm audit 报告 0 个已知漏洞。
+
+### 使用与边界
+
+- 当前本机前后端已运行，可打开 `http://127.0.0.1:5173`；没有重启或停止用户服务。
+- 内容刷新：`cd backend` 后执行 `uv run python manage.py import_feeds`。
+- 如尚无账号，运行 `uv run python manage.py createsuperuser`，然后在 Django admin
+  创建普通 reader；已有 Django 账号可直接在网站登录。密码只在本地交互输入。
+- 当前只有手动更新；没有定时任务、重试队列、最后成功时间面板、站内搜索、AI、
+  公开部署或 iOS。基础登录限流为单进程本地缓存，公开部署前需要完善。
+- RSS 只提供当前窗口，旧内容不会因某次 feed 缺失而删除。精细时间窗口、更多来源
+  和跨来源事件聚合尚未实现。仅经过浏览器手机模拟，真实 iPhone Safari 未验收。
+- 下一步按 M2 推进更新调度、搜索、CI、运行日志与 HTTPS 部署，先确定部署范围。
+- 学习小任务：修改 `frontend/src/account.tsx` 的收藏按钮文案，观察相关前端与
+  浏览器测试为何需要同步调整；不需要改数据库模型。
+
+## Docker Desktop 窗口排查（2026-10-15）
+
+- 本机安装 Docker Desktop 4.93.0（Apple Silicon）；实际查询引擎版本为 29.8.1，
+  `docker desktop status` 返回 running。
+- 实际 `docker ps` 显示 `worldline-db-1` 为 Up 13 days (healthy)。此前未找到
+  Docker / 无数据库服务的环境记录已不代表当前状态；容器健康不等于 Django
+  已连接数据库，也不代表迁移、样例导入或完整测试已验收。
+- 成功打开并将 Containers 管理窗口置于前台，界面显示 Engine running 和
+  worldline 容器组。本次未重启引擎、停止容器、清理数据或更新 Docker。
+- 当日日志有 login.docker.com DNS 解析失败导致账号令牌刷新失败的记录，
+  尚无证据证明其导致窗口不显示；窗口未自动出现的具体触发原因未确认。
+- 本次仅检查 Docker 状态与窗口，未运行前后端测试、PostgreSQL 迁移、两次
+  seed_demo 或完整 pytest；M0 数据库验收仍待执行。
+
+### 同日补充：普通入口仍无法唤起窗口
+
+- 用户确认菜单栏没有鲸鱼图标，关闭窗口后点击 Docker.app 仍不能显示界面；
+  前述直接打开内部管理程序只是临时恢复窗口，不能视为普通入口已修复。
+- 获得用户明确授权后执行完整 Docker Desktop 重启。重启命令成功返回，
+  原数据库容器未自动运行，因此启动原有 `worldline-db-1`，随后实际确认
+  status=running、health=healthy，Docker Desktop status=running。
+- 重启后的 Electron 日志记录 `reason: open-tray`、`name: dashboard`、
+  `Creating tray menu` 和 `Determined initial tray icon`；重启前持续运行的
+  界面进程参数为 `name=new-license`。此差异提示界面初始化状态值得关注，
+  但尚不足以断言具体根因。
+- 用户实际复测确认：完整重启后普通 Docker.app 仍无法打开窗口；原入口
+  故障未解决，菜单栏图标的可见性也未确认恢复。
+- 直接打开内部 `Docker Desktop.app` 可正常唤起管理窗口；已实际关闭窗口
+  并重新打开验证。随后在用户桌面创建 `Docker Dashboard.app` 符号链接，
+  指向 `/Applications/Docker.app/Contents/MacOS/Docker Desktop.app`，再次
+  关闭窗口并通过此快捷入口成功重新打开，显示 Engine running。
+- 该快捷入口是已验证的绕行方案，不代表原 Docker.app 或菜单栏故障已根治。
+  未清理数据、重装或升级 Docker；若未来更新改变内部程序路径，需重新检查入口。
+
+### 菜单栏设置核查
+
+- 用户补充鲸鱼图标此前被主动隐藏。实际 UI 核查确认：macOS 系统设置 →
+  菜单栏 → 允许在菜单栏显示 → Docker 为 off；Docker General 中
+  Open Docker Dashboard when Docker Desktop starts 为已勾选，Apply 为禁用。
+- 鲸鱼图标不可见有明确的显示设置原因，不能作为 Docker 界面组件损坏的证据。
+  该显示开关与再次点击 Docker.app 是否唤起窗口的因果关系未验证。
+- 用户明确选择保持隐藏、仅解释检查结果；本轮未更改设置、未重启服务，
+  也未执行项目测试。独立 Dashboard 快捷入口仍保留。
+
 ## 个人求职文件系统初始化（2026-10-09）
 
 - 按用户要求创建独立的 `job-search/`：4 个子目录、14 个文件。

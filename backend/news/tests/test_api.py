@@ -18,7 +18,7 @@ def test_seed_repeat_and_filter_preserve_sample_provenance(client):
     call_command("seed_demo")
     call_command("seed_demo")
     assert Article.objects.count() == 4
-    response = client.get("/api/articles/?topic=music")
+    response = client.get("/api/articles/?topic=music&samples=1")
     assert response.status_code == 200
     assert response.data["count"] == 1
     article = response.data["results"][0]

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   Link,
   Route,
@@ -8,8 +8,15 @@ import {
   useParams,
   useSearchParams,
 } from 'react-router-dom'
-import { ApiError, get, publishedLabel, safeExternalUrl } from './api'
+import {
+  ApiError,
+  get,
+  publishedLabel,
+  safeExternalUrl,
+  timestampLabel,
+} from './api'
 import type { Article, ArticlePage, Health, Topic } from './api'
+import { AccountNav, BookmarkButton, Login, useSession } from './account'
 
 function ConnectionStatus() {
   const health = useQuery({
@@ -45,7 +52,13 @@ function Notice({ retry }: { retry: () => void }) {
 function Metadata({ article }: { article: Article }) {
   return (
     <div className="metadata">
-      <span>{article.source.name}</span>
+      <a
+        href={safeExternalUrl(article.source.website_url)}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {article.source.name}
+      </a>
       <span aria-hidden="true">·</span>
       {article.published_at ? (
         <time dateTime={article.published_at}>
@@ -105,8 +118,12 @@ function ArticleCard({
         <h3>
           <Link to={`/articles/${article.slug}`}>{article.title}</Link>
         </h3>
-        <p>{article.summary}</p>
+        <p>
+          {article.summary ||
+            'No summary was provided by the source. Open the original article to read more.'}
+        </p>
         <Metadata article={article} />
+        <BookmarkButton article={article} />
         {lead && (
           <Link className="text-link" to={`/articles/${article.slug}`}>
             Explore the story <span aria-hidden="true">↗</span>
@@ -127,6 +144,7 @@ function ArticleCard({
 }
 
 function Home() {
+  const session = useSession()
   const [params, setParams] = useSearchParams()
   const topic = params.get('topic') || ''
   const page = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1)
@@ -135,17 +153,15 @@ function Home() {
     queryFn: ({ signal }) => get<Topic[]>('topics/', signal),
   })
   const articles = useQuery({
-    queryKey: ['articles', topic, page],
+    queryKey: ['articles', session.data?.user?.id ?? null, topic, page],
     queryFn: ({ signal }) =>
       get<ArticlePage>(
         `articles/?topic=${encodeURIComponent(topic)}&page=${page}`,
         signal,
       ),
-    placeholderData: keepPreviousData,
   })
   const items = articles.data?.results || []
-  const lead =
-    !topic && page === 1 ? items.find((item) => item.featured) : undefined
+  const lead = !topic && page === 1 ? items[0] : undefined
   const rest = items.filter((item) => item.id !== lead?.id)
   return (
     <>
@@ -174,7 +190,7 @@ function Home() {
           className={!topic ? 'active' : ''}
           onClick={() => setParams({})}
         >
-          For you <span>↗</span>
+          All topics <span>↗</span>
         </button>
         {topics.data?.map((item) => (
           <button
@@ -186,7 +202,7 @@ function Home() {
             {item.name}
           </button>
         ))}
-        <span className="edition">THE DEMO EDITION</span>
+        <span className="edition">FROM THE SOURCES</span>
       </nav>
       {topics.isError && (
         <p role="status" className="filter-error">
@@ -282,9 +298,10 @@ function Home() {
 }
 
 function Detail() {
+  const session = useSession()
   const { slug } = useParams()
   const article = useQuery({
-    queryKey: ['article', slug],
+    queryKey: ['article', session.data?.user?.id ?? null, slug],
     queryFn: ({ signal }) =>
       get<Article>(`articles/${encodeURIComponent(slug!)}/`, signal),
   })
@@ -310,10 +327,53 @@ function Detail() {
       <TopicTag article={item} />
       <h1>{item.title}</h1>
       <Metadata article={item} />
+      <dl className="story-dates">
+        <div>
+          <dt>Published</dt>
+          <dd>
+            {item.published_at ? (
+              <time dateTime={item.published_at}>
+                {timestampLabel(item.published_at)}
+              </time>
+            ) : (
+              'Publication date unavailable'
+            )}
+          </dd>
+        </div>
+        {item.source_updated_at && (
+          <div>
+            <dt>Updated by source</dt>
+            <dd>
+              <time dateTime={item.source_updated_at}>
+                {timestampLabel(item.source_updated_at)}
+              </time>
+            </dd>
+          </div>
+        )}
+        <div>
+          <dt>Collected by Worldline</dt>
+          <dd>
+            <time dateTime={item.collected_at}>
+              {timestampLabel(item.collected_at)}
+            </time>
+          </dd>
+        </div>
+      </dl>
       <div className="summary-label">
-        {item.is_sample ? 'ORIGINAL DEMO COPY' : 'SOURCE SUMMARY'}
+        {item.is_sample ? 'ORIGINAL DEMO COPY' : 'SOURCE FEED EXCERPT'}
       </div>
-      <p className="detail-summary">{item.summary}</p>
+      <p className="detail-summary">
+        {item.summary ||
+          'No summary was provided by the source. Read the original article for the full story.'}
+      </p>
+      {!item.is_sample && (
+        <p className="source-note">
+          A short excerpt supplied by the source feed, not an AI summary.
+          Published dates are shown in UTC; they are never replaced by
+          collection times.
+        </p>
+      )}
+      <BookmarkButton article={item} />
       {item.is_sample && (
         <div className="sample-explanation">
           This is sample content, not live news. The link below is a related
@@ -336,6 +396,87 @@ function Detail() {
         </a>
       )}
     </article>
+  )
+}
+
+function SavedStories() {
+  const session = useSession()
+  const [params, setParams] = useSearchParams()
+  const page = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1)
+  const saved = useQuery({
+    queryKey: ['bookmarks', session.data?.user?.id, page],
+    queryFn: ({ signal }) =>
+      get<ArticlePage>(`bookmarks/?page=${page}`, signal),
+    enabled: !!session.data?.user,
+  })
+  if (session.isPending)
+    return (
+      <div className="notice" role="status">
+        Checking your account…
+      </div>
+    )
+  if (session.isError) return <Notice retry={() => void session.refetch()} />
+  if (!session.data?.user)
+    return (
+      <section className="notice">
+        <h1>A place for your discoveries.</h1>
+        <p>Sign in to see your saved stories.</p>
+        <Link className="button" to="/login?next=/bookmarks">
+          Sign in
+        </Link>
+      </section>
+    )
+  return (
+    <section className="saved-page">
+      <div className="eyebrow">YOUR PERSONAL COLLECTION</div>
+      <h1>Worth coming back to.</h1>
+      <p>Stories you’ve saved, ready when you are.</p>
+      {saved.isPending ? (
+        <div role="status">Loading saved stories…</div>
+      ) : saved.isError ? (
+        <div>
+          <Notice retry={() => void saved.refetch()} />
+          {page > 1 && (
+            <button className="button" onClick={() => setParams({})}>
+              Back to first page
+            </button>
+          )}
+        </div>
+      ) : saved.data.results.length === 0 ? (
+        <div className="notice">
+          <h2>No saved stories yet.</h2>
+          <p>Use “Save story” on any article to keep it here.</p>
+          <Link className="text-link" to="/">
+            Explore stories →
+          </Link>
+        </div>
+      ) : (
+        <>
+          {saved.data.results.map((article, index) => (
+            <ArticleCard article={article} index={index} key={article.id} />
+          ))}
+          {(page > 1 || saved.data.next) && (
+            <nav className="pagination" aria-label="Saved story pages">
+              <button
+                className="button"
+                disabled={page === 1}
+                onClick={() => setParams({ page: String(page - 1) })}
+              >
+                Previous
+              </button>
+              <span>Page {page}</span>
+              <button
+                className="button"
+                disabled={!saved.data.next}
+                onClick={() => setParams({ page: String(page + 1) })}
+              >
+                Next
+              </button>
+            </nav>
+          )}
+        </>
+      )}
+    </section>
   )
 }
 
@@ -362,8 +503,8 @@ export default function App() {
         Skip to content
       </a>
       <div className="demo-banner">
-        <span className="demo-pill">M0 PREVIEW</span> A working foundation with
-        sample stories. Live news is coming next.
+        <span className="demo-pill">WORLDLINE</span> Stories from official
+        feeds. Follow the source. Keep your perspective.
       </div>
       <div className="shell">
         <header className="header">
@@ -375,13 +516,15 @@ export default function App() {
           </Link>
           <div className="header-right">
             <span className="header-motto">Stay informed. Stay curious.</span>
-            <span className="preview-label">PREVIEW EDITION</span>
+            <AccountNav />
           </div>
         </header>
         <main id="main">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/articles/:slug" element={<Detail />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/bookmarks" element={<SavedStories />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
