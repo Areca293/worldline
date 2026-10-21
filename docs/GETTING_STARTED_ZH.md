@@ -165,7 +165,7 @@ TanStack Query 管理请求的加载、缓存和失败状态；React Router 管�
 M1 的登录使用 Django 会话，收藏保存到 PostgreSQL，每条收藏都绑定登录用户。
 创建管理员：在 `backend` 执行 `uv run python manage.py createsuperuser`；随后可在
 http://127.0.0.1:8000/admin/ 的 Users 中创建非 staff 的普通账号。已有账号无需重建。
-网站右上角 Sign in 使用这些账号登录，Save story 保存，Saved stories 查看。
+网站右上角 Sign in 使用这些账号登录，星标保存，Saved stories 查看，实心星标取消收藏。
 读者也可点击独立 Register 入口，用用户名、邮箱和密码自行注册；成功后自动登录。
 邮箱验证与密码找回尚未实现。不要把真实密码写进源码、文档或 Git；没有默认测试账号。
 

@@ -895,27 +895,36 @@ footer > span {
   color: var(--muted);
 }
 .save-button {
-  display: inline-block;
-  margin-top: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
   background: transparent;
-  border: 1px solid #bfc5b6;
-  border-radius: 4px;
-  padding: 9px 12px;
-  font-size: 11px;
+  color: var(--muted);
   cursor: pointer;
 }
 .save-button[aria-pressed='true'] {
-  background: #e7ebdf;
   color: #435238;
+  background: #e7ebdf;
 }
 .save-button:hover {
-  border-color: var(--accent);
+  background: #e7ebdf;
+  color: var(--ink);
 }
-.save-status {
-  display: block;
-  margin-top: 12px;
-  font-size: 10px;
-  color: var(--muted);
+.save-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.save-control {
+  position: relative;
+}
+.save-control .inline-error {
+  max-width: 220px;
 }
 .inline-error {
   font-size: 12px;
@@ -970,10 +979,6 @@ footer > span {
   font-size: 12px !important;
   color: var(--muted);
   line-height: 1.8;
-}
-.detail .save-control,
-.detail > .save-button {
-  margin-bottom: 25px;
 }
 .saved-page {
   max-width: 820px;
@@ -1037,4 +1042,75 @@ footer > span {
 }
 .story-dates dd {
   margin: 0;
+}
+
+/* Keep reading actions separate from prose and aligned with the publication date. */
+.article-copy {
+  min-width: 0;
+  flex: 1;
+}
+.card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.card-heading h3 {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.card-heading .row-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin-top: 8px;
+  border-radius: 50%;
+  font-size: 26px;
+}
+.card-heading .row-arrow:hover {
+  background: #e7ebdf;
+}
+.card-source {
+  display: block;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.card-source:hover {
+  text-decoration: underline;
+}
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.detail-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 28px 0;
+}
+.detail-actions .external {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 44px;
+  padding: 12px 20px;
+  margin: 0;
+  line-height: 1.4;
+}
+.login-page form > div > label {
+  display: block;
+  margin: 0 0 8px;
 }

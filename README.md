@@ -94,8 +94,8 @@ email verification and password recovery are not implemented yet. Existing users
 [sign in](http://127.0.0.1:5173/login). Administrators may also create reader accounts
 in [Django admin](http://127.0.0.1:8000/admin/). There is no default product password.
 
-Select **Save story**, then **Saved stories**. Reloading retains your bookmarks.
-**Remove bookmark** removes only your own bookmark. Sign-out clears the client
+Select the **star** (Save story), then **Saved stories**. Reloading retains your bookmarks.
+Select the filled star (Remove bookmark) to remove only your own bookmark. Sign-out clears the client
 cache of personalized content. Anonymous requests cannot list or change bookmarks;
 user IDs supplied in query strings or bodies do not select another user's records.
 

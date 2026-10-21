@@ -19,6 +19,23 @@ test('read, filter, sign in, persist a private bookmark, switch users and remove
   await expect(
     page.getByRole('heading', { name: 'Browser test story' }),
   ).toBeVisible()
+  const original = page.getByRole('link', {
+    name: /^Open original article: Browser test story/,
+  })
+  await expect(original).toHaveAttribute('href', 'https://example.com/story')
+  await expect(original).toHaveAttribute('target', '_blank')
+  const star = page.getByRole('link', { name: 'Sign in to save', exact: true })
+  await expect(star.locator('svg')).toBeVisible()
+  const starBox = await star.boundingBox()
+  const dateBox = await page.locator('.card-footer time').boundingBox()
+  expect(starBox!.width).toBeGreaterThanOrEqual(44)
+  expect(
+    Math.abs(
+      starBox!.y + starBox!.height / 2 - dateBox!.y - dateBox!.height / 2,
+    ),
+  ).toBeLessThan(2)
+  await expect(page.getByText('A place to begin')).toHaveCount(0)
+  await expect(page.getByText('Stay informed. Stay curious.')).toHaveCount(0)
   await page.getByRole('button', { name: 'Music', exact: true }).click()
   await expect(page).toHaveURL(/topic=music/)
   await page
@@ -30,6 +47,22 @@ test('read, filter, sign in, persist a private bookmark, switch users and remove
   await expect(
     page.getByRole('link', { name: 'Read original article' }),
   ).toHaveAttribute('href', 'https://example.com/story')
+  const actions = page.locator('.detail-actions')
+  const actionStar = await actions
+    .getByRole('link', { name: 'Sign in to save' })
+    .boundingBox()
+  const actionOriginal = await actions
+    .getByRole('link', { name: 'Read original article' })
+    .boundingBox()
+  expect(actionStar!.width).toBeGreaterThanOrEqual(44)
+  expect(actionOriginal!.height).toBeGreaterThanOrEqual(44)
+  expect(actionStar!.x + actionStar!.width).toBeLessThanOrEqual(
+    actionOriginal!.x,
+  )
+  await page.screenshot({
+    path: testInfo.outputPath('detail-actions.png'),
+    fullPage: true,
+  })
   await signIn(page, 'browser-alice')
   await page.getByRole('button', { name: 'Save story', exact: true }).click()
   await expect(

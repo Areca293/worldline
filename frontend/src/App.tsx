@@ -121,30 +121,46 @@ function ArticleCard({
       )}
       <div className="article-copy">
         <TopicTag article={article} />
-        <h3>
-          <Link to={`/articles/${article.slug}`}>{article.title}</Link>
-        </h3>
+        <div className="card-heading">
+          <h3>
+            <Link to={`/articles/${article.slug}`}>{article.title}</Link>
+          </h3>
+          {safeExternalUrl(article.original_url) && (
+            <a
+              className="row-arrow"
+              href={safeExternalUrl(article.original_url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open original article: ${article.title} (opens in a new tab)`}
+              title="Open original article"
+            >
+              <span aria-hidden="true">↗</span>
+            </a>
+          )}
+        </div>
         <p>
           {article.summary ||
             'No summary was provided by the source. Open the original article to read more.'}
         </p>
-        <Metadata article={article} />
-        <BookmarkButton article={article} />
-        {lead && (
-          <Link className="text-link" to={`/articles/${article.slug}`}>
-            Explore the story <span aria-hidden="true">↗</span>
-          </Link>
-        )}
-      </div>
-      {!lead && (
-        <Link
-          className="row-arrow"
-          to={`/articles/${article.slug}`}
-          aria-label={`Read ${article.title}`}
+        <a
+          className="card-source"
+          href={safeExternalUrl(article.source.website_url)}
+          target="_blank"
+          rel="noopener noreferrer"
         >
-          ↗
-        </Link>
-      )}
+          {article.source.name}
+        </a>
+        <div className="card-footer">
+          {article.published_at ? (
+            <time dateTime={article.published_at}>
+              {publishedLabel(article.published_at)}
+            </time>
+          ) : (
+            <span>{publishedLabel(null)}</span>
+          )}
+          <BookmarkButton article={article} />
+        </div>
+      </div>
     </article>
   )
 }
@@ -236,7 +252,6 @@ function Home() {
             <section className="lead-section">
               <div className="section-title">
                 <h2>In focus</h2>
-                <span>A place to begin</span>
               </div>
               <ArticleCard article={lead} lead />
             </section>
@@ -379,7 +394,6 @@ function Detail() {
           collection times.
         </p>
       )}
-      <BookmarkButton article={item} />
       {item.is_sample && (
         <div className="sample-explanation">
           This is sample content, not live news. The link below is a related
@@ -387,20 +401,23 @@ function Detail() {
           date has been invented.
         </div>
       )}
-      {url && (
-        <a
-          className="button external"
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {item.is_sample
-            ? 'Visit reference resource'
-            : 'Read original article'}{' '}
-          <span aria-hidden="true">↗</span>
-          <span className="sr-only"> (opens in a new tab)</span>
-        </a>
-      )}
+      <div className="detail-actions">
+        <BookmarkButton article={item} />
+        {url && (
+          <a
+            className="button external"
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {item.is_sample
+              ? 'Visit reference resource'
+              : 'Read original article'}{' '}
+            <span aria-hidden="true">↗</span>
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        )}
+      </div>
     </article>
   )
 }
@@ -451,7 +468,7 @@ function SavedStories() {
       ) : saved.data.results.length === 0 ? (
         <div className="notice">
           <h2>No saved stories yet.</h2>
-          <p>Use “Save story” on any article to keep it here.</p>
+          <p>Select the star on any article to keep it here.</p>
           <Link className="text-link" to="/">
             Explore stories →
           </Link>
@@ -521,7 +538,6 @@ export default function App() {
             worldline<span className="brand-period">.</span>
           </Link>
           <div className="header-right">
-            <span className="header-motto">Stay informed. Stay curious.</span>
             <AccountNav />
           </div>
         </header>
