@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { PageLinks, PageSize, useReadingPages } from './pagination'
 import { useQuery } from '@tanstack/react-query'
 import {
   Link,
@@ -167,23 +168,24 @@ function ArticleCard({
 
 function Home() {
   const session = useSession()
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const topic = params.get('topic') || ''
-  const page = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1)
+  const { page, size, update } = useReadingPages()
   const topics = useQuery({
     queryKey: ['topics'],
     queryFn: ({ signal }) => get<Topic[]>('topics/', signal),
   })
   const articles = useQuery({
-    queryKey: ['articles', session.data?.user?.id ?? null, topic, page],
+    queryKey: ['articles', session.data?.user?.id ?? null, topic, page, size],
     queryFn: ({ signal }) =>
       get<ArticlePage>(
-        `articles/?topic=${encodeURIComponent(topic)}&page=${page}`,
+        `articles/?topic=${encodeURIComponent(topic)}&page=${page}&page_size=${size}`,
         signal,
       ),
   })
   const items = articles.data?.results || []
-  const lead = !topic && page === 1 ? items[0] : undefined
+  const currentPage = articles.data?.page ?? page
+  const lead = !topic && currentPage === 1 ? items[0] : undefined
   const rest = items.filter((item) => item.id !== lead?.id)
   return (
     <>
@@ -210,7 +212,7 @@ function Home() {
         <button
           aria-pressed={!topic}
           className={!topic ? 'active' : ''}
-          onClick={() => setParams({})}
+          onClick={() => update({ topic: '', page: '' })}
         >
           All topics <span>↗</span>
         </button>
@@ -219,13 +221,18 @@ function Home() {
             key={item.slug}
             aria-pressed={topic === item.slug}
             className={topic === item.slug ? 'active' : ''}
-            onClick={() => setParams({ topic: item.slug })}
+            onClick={() => update({ topic: item.slug, page: '' })}
           >
             {item.name}
           </button>
         ))}
         <span className="edition">FROM THE SOURCES</span>
       </nav>
+      <PageSize
+        key={size}
+        size={size}
+        onChange={(value) => update({ page_size: value, page: '' })}
+      />
       {topics.isError && (
         <p role="status" className="filter-error">
           Topics are unavailable.{' '}
@@ -293,25 +300,12 @@ function Home() {
               </div>
             </aside>
           </div>
-          {(page > 1 || articles.data?.next) && (
-            <nav className="pagination" aria-label="Article pages">
-              <button
-                className="button"
-                disabled={page === 1 || articles.isPlaceholderData}
-                onClick={() => setParams({ topic, page: String(page - 1) })}
-              >
-                Previous
-              </button>
-              <span>Page {page}</span>
-              <button
-                className="button"
-                disabled={!articles.data?.next || articles.isPlaceholderData}
-                onClick={() => setParams({ topic, page: String(page + 1) })}
-              >
-                Next
-              </button>
-            </nav>
-          )}
+          <PageLinks
+            page={currentPage}
+            total={articles.data?.total_pages ?? 1}
+            onChange={(value) => update({ page: String(value) })}
+            label="Article pages"
+          />
         </div>
       )}
     </>
@@ -424,12 +418,11 @@ function Detail() {
 
 function SavedStories() {
   const session = useSession()
-  const [params, setParams] = useSearchParams()
-  const page = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1)
+  const { page, size, update } = useReadingPages()
   const saved = useQuery({
-    queryKey: ['bookmarks', session.data?.user?.id, page],
+    queryKey: ['bookmarks', session.data?.user?.id, page, size],
     queryFn: ({ signal }) =>
-      get<ArticlePage>(`bookmarks/?page=${page}`, signal),
+      get<ArticlePage>(`bookmarks/?page=${page}&page_size=${size}`, signal),
     enabled: !!session.data?.user,
   })
   if (session.isPending)
@@ -454,13 +447,18 @@ function SavedStories() {
       <div className="eyebrow">YOUR PERSONAL COLLECTION</div>
       <h1>Worth coming back to.</h1>
       <p>Stories you’ve saved, ready when you are.</p>
+      <PageSize
+        key={size}
+        size={size}
+        onChange={(value) => update({ page_size: value, page: '' })}
+      />
       {saved.isPending ? (
         <div role="status">Loading saved stories…</div>
       ) : saved.isError ? (
         <div>
           <Notice retry={() => void saved.refetch()} />
           {page > 1 && (
-            <button className="button" onClick={() => setParams({})}>
+            <button className="button" onClick={() => update({ page: '' })}>
               Back to first page
             </button>
           )}
@@ -478,25 +476,12 @@ function SavedStories() {
           {saved.data.results.map((article, index) => (
             <ArticleCard article={article} index={index} key={article.id} />
           ))}
-          {(page > 1 || saved.data.next) && (
-            <nav className="pagination" aria-label="Saved story pages">
-              <button
-                className="button"
-                disabled={page === 1}
-                onClick={() => setParams({ page: String(page - 1) })}
-              >
-                Previous
-              </button>
-              <span>Page {page}</span>
-              <button
-                className="button"
-                disabled={!saved.data.next}
-                onClick={() => setParams({ page: String(page + 1) })}
-              >
-                Next
-              </button>
-            </nav>
-          )}
+          <PageLinks
+            page={saved.data.page ?? page}
+            total={saved.data.total_pages ?? 1}
+            onChange={(value) => update({ page: String(value) })}
+            label="Saved story pages"
+          />
         </>
       )}
     </section>
@@ -516,10 +501,10 @@ function NotFound() {
 }
 
 export default function App() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   useEffect(() => {
     window.scrollTo(0, 0)
-  }, [pathname])
+  }, [pathname, search])
   return (
     <>
       <a className="skip-link" href="#main">

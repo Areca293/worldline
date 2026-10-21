@@ -1114,3 +1114,82 @@ footer > span {
   display: block;
   margin: 0 0 8px;
 }
+
+.page-size {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 24px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.page-size form {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.page-size select,
+.page-size input,
+.page-size button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fcfbf7;
+  color: var(--ink);
+  font: inherit;
+}
+.page-size input {
+  width: 100px;
+}
+.page-size button,
+.page-size select {
+  cursor: pointer;
+}
+.pagination {
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pagination button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.pagination button[aria-current='page'] {
+  background: var(--ink);
+  color: #fff;
+}
+.pagination button:hover:not([aria-current='page']):not(:disabled) {
+  background: #e7ebdf;
+}
+.pagination button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.page-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.page-gap {
+  color: var(--muted);
+}
+@media (max-width: 650px) {
+  .page-size {
+    justify-content: flex-start;
+  }
+  .pagination {
+    gap: 2px;
+  }
+  .page-item {
+    gap: 2px;
+  }
+}

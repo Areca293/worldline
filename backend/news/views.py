@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Article, Bookmark, Topic
+from .pagination import ReadingPagination
 from .serializers import ArticleSerializer, TopicSerializer
 
 
@@ -52,6 +53,7 @@ class TopicList(DatabaseErrorMixin, generics.ListAPIView):
 
 @method_decorator(never_cache, name="dispatch")
 class ArticleList(DatabaseErrorMixin, generics.ListAPIView):
+    pagination_class = ReadingPagination
     serializer_class = ArticleSerializer
 
     def get_queryset(self):
@@ -83,6 +85,7 @@ class ArticleDetail(DatabaseErrorMixin, generics.RetrieveAPIView):
 
 @method_decorator(never_cache, name="dispatch")
 class BookmarkList(DatabaseErrorMixin, generics.ListAPIView):
+    pagination_class = ReadingPagination
     permission_classes = [IsAuthenticated]
     serializer_class = ArticleSerializer
 

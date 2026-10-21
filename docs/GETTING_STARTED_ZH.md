@@ -169,6 +169,9 @@ http://127.0.0.1:8000/admin/ 的 Users 中创建非 staff 的普通账号。已�
 读者也可点击独立 Register 入口，用用户名、邮箱和密码自行注册；成功后自动登录。
 邮箱验证与密码找回尚未实现。不要把真实密码写进源码、文档或 Git；没有默认测试账号。
 
+首页和收藏页上方的 Stories per page 可选数量、自定义或 All（不限）；底部页码可直接跳转。
+刷新保留 URL 中的数量和页码，切换领域或数量时回到第一页。All 一次加载当前范围的全部文章。
+
 桌面/手机视口的完整浏览器测试：先准备 Playwright Chromium 或已安装的 Chrome，
 在 `backend` 执行 `E2E_BROWSER_CHANNEL=chrome uv run pytest -m browser -q`。
 测试使用单独数据库，自动清理，不会改动你的收藏。

@@ -18,6 +18,9 @@ export interface Article {
   featured: boolean
 }
 export interface ArticlePage {
+  page: number
+  page_size: number | null
+  total_pages: number
   count: number
   results: Article[]
   next: string | null

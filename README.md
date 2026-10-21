@@ -21,7 +21,7 @@ this repository currently contains local development configuration only.
 
 ```text
 frontend/src/App.tsx          Reading pages and topic navigation
-frontend/src/account.tsx      Sign-in, sign-out and bookmark controls
+frontend/src/account.tsx      Registration, sign-in and bookmark controls
 frontend/src/api.ts           Typed API calls and CSRF-protected writes
 backend/news/models.py       Source, Topic, Article and Bookmark
 backend/news/feeds.py        Bounded download, parse and idempotent import
@@ -103,6 +103,23 @@ Sessions use Django's HttpOnly cookie. Login, logout and bookmark writes require
 CSRF protection, including anonymous registration. Login has a 10-per-minute IP
 throttle and registration a 5-per-minute IP throttle using Django's local
 cache; a shared throttle store and production hardening are needed before public deployment.
+
+## Reading controls
+
+Article titles open the in-app detail. The diagonal arrow opens the original article
+in a new tab. The star at the lower right, aligned with the publication date, saves
+or removes a bookmark; unsigned readers are directed to sign in.
+
+Home and Saved stories provide numbered pages with the current page highlighted.
+**Stories per page** offers 10, 20, 50, 100, a custom positive number, or **All (unlimited)**.
+The URL retains the selection across reloads; changing the topic or size resets the
+page. All loads the entire matching collection and can be slower for large libraries.
+
+`/api/articles/` and `/api/bookmarks/` accept `page` and `page_size` (a positive integer
+or `all`). Responses include `count`, `results`, `next`, `previous`, `page`, `page_size`
+(null for All) and `total_pages`. Out-of-range pages resolve to the last available page,
+including when removing bookmarks shrinks a collection. All still respects the topic
+filter and the current user's bookmark permissions.
 
 ## Sources and dates
 

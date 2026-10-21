@@ -7,6 +7,7 @@ async function signIn(page: Page, username: string) {
   await page.getByLabel('Password').fill(process.env.E2E_PASSWORD!)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
+  await page.goto('/articles/browser-test-story')
 }
 
 test('read, filter, sign in, persist a private bookmark, switch users and remove it', async ({
@@ -24,10 +25,14 @@ test('read, filter, sign in, persist a private bookmark, switch users and remove
   })
   await expect(original).toHaveAttribute('href', 'https://example.com/story')
   await expect(original).toHaveAttribute('target', '_blank')
-  const star = page.getByRole('link', { name: 'Sign in to save', exact: true })
+  const star = page
+    .locator('.lead-card')
+    .getByRole('link', { name: 'Sign in to save', exact: true })
   await expect(star.locator('svg')).toBeVisible()
   const starBox = await star.boundingBox()
-  const dateBox = await page.locator('.card-footer time').boundingBox()
+  const dateBox = await page
+    .locator('.lead-card .card-footer time')
+    .boundingBox()
   expect(starBox!.width).toBeGreaterThanOrEqual(44)
   expect(
     Math.abs(
@@ -127,4 +132,65 @@ test('registers a reader, keeps the session after reload and can sign in again',
   await page.getByRole('button', { name: 'Sign out' }).click()
   await signIn(page, username)
   await expect(page.getByText(username, { exact: true })).toBeVisible()
+})
+
+test('changes page numbers and sizes, preserves them on reload, and shows all stories', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/')
+  await page.getByLabel('Stories per page', { exact: true }).selectOption('10')
+  await expect(page.locator('article')).toHaveCount(10)
+  await page.getByRole('button', { name: 'Page 2', exact: true }).click()
+  await expect(page).toHaveURL(/page=2/)
+  await expect(
+    page.getByRole('button', { name: 'Page 2', exact: true }),
+  ).toHaveAttribute('aria-current', 'page')
+  await expect(
+    page.getByRole('heading', { name: 'Browser test story', exact: true }),
+  ).toHaveCount(0)
+  await page.reload()
+  await expect(
+    page.getByLabel('Stories per page', { exact: true }),
+  ).toHaveValue('10')
+  await expect(
+    page.getByRole('button', { name: 'Page 2', exact: true }),
+  ).toHaveAttribute('aria-current', 'page')
+  await page
+    .getByLabel('Stories per page', { exact: true })
+    .selectOption('custom')
+  await page.getByLabel('Custom stories per page').fill('7')
+  await page.getByRole('button', { name: 'Apply', exact: true }).click()
+  await expect(page.locator('article')).toHaveCount(7)
+  await expect(
+    page.getByRole('button', { name: 'Page 1', exact: true }),
+  ).toHaveAttribute('aria-current', 'page')
+  await page.getByRole('button', { name: 'Music', exact: true }).click()
+  await expect(page.getByLabel('Custom stories per page')).toHaveValue('7')
+  await expect(page.locator('article')).toHaveCount(7)
+  await page.getByRole('button', { name: 'Page 2', exact: true }).click()
+  await expect(
+    page.getByRole('button', { name: 'Page 2', exact: true }),
+  ).toHaveAttribute('aria-current', 'page')
+  await page
+    .getByRole('navigation', { name: 'Article pages' })
+    .scrollIntoViewIfNeeded()
+  await page.screenshot({
+    path: testInfo.outputPath('numbered-pages.png'),
+    fullPage: false,
+  })
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true)
+  await page.getByLabel('Stories per page', { exact: true }).selectOption('all')
+  await expect(page.locator('article')).toHaveCount(25)
+  await expect(
+    page.getByRole('navigation', { name: 'Article pages' }),
+  ).toHaveCount(0)
+  await page.reload()
+  await expect(
+    page.getByLabel('Stories per page', { exact: true }),
+  ).toHaveValue('all')
+  await expect(page.locator('article')).toHaveCount(25)
 })

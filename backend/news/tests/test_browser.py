@@ -8,6 +8,7 @@ import os
 import secrets
 import socket
 import subprocess
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -37,6 +38,20 @@ def test_reading_in_real_browser(live_server, django_user_model, settings, tmp_p
         summary="An original fixture used only in the disposable browser-test database.",
         original_url="https://example.com/story",
         published_at=timezone.now(),
+    )
+    Article.objects.bulk_create(
+        [
+            Article(
+                title=f"Archive story {n:02d}",
+                slug=f"browser-archive-{n}",
+                topic=topic,
+                source=source,
+                summary="Original pagination fixture in the disposable database.",
+                original_url=f"https://example.com/archive/{n}",
+                published_at=timezone.now() - timedelta(days=n + 1),
+            )
+            for n in range(24)
+        ]
     )
     with socket.socket() as available:
         available.bind(("127.0.0.1", 0))
