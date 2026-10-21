@@ -66,7 +66,7 @@ function Metadata({ article }: { article: Article }) {
       >
         {article.source.name}
       </a>
-      <span aria-hidden="true">·</span>
+
       {article.published_at ? (
         <time dateTime={article.published_at}>
           {publishedLabel(article.published_at)}
@@ -81,24 +81,8 @@ function Metadata({ article }: { article: Article }) {
 function TopicTag({ article }: { article: Article }) {
   return (
     <div className="eyebrow">
-      <span className={`topic-dot ${article.topic.slug}`} />
       {article.topic.name}
       {article.is_sample && <span className="sample-tag">Sample</span>}
-    </div>
-  )
-}
-
-function OrbitArtwork() {
-  return (
-    <div className="artwork" aria-hidden="true">
-      <div className="art-grid" />
-      <div className="orbit orbit-one" />
-      <div className="orbit orbit-two" />
-      <div className="orbit orbit-three" />
-      <div className="planet" />
-      <div className="satellite" />
-      <span className="art-caption">A WORLD IN MOTION</span>
-      <span className="art-coordinate">01 / EXPLORE</span>
     </div>
   )
 }
@@ -106,20 +90,12 @@ function OrbitArtwork() {
 function ArticleCard({
   article,
   lead = false,
-  index = 0,
 }: {
   article: Article
   lead?: boolean
-  index?: number
 }) {
   return (
     <article className={lead ? 'lead-card' : 'article-row'}>
-      {lead && <OrbitArtwork />}
-      {!lead && (
-        <span className="row-number" aria-hidden="true">
-          {String(index + 1).padStart(2, '0')}
-        </span>
-      )}
       <div className="article-copy">
         <TopicTag article={article} />
         <div className="card-heading">
@@ -166,6 +142,24 @@ function ArticleCard({
   )
 }
 
+function ReadingNote() {
+  return (
+    <aside className="reading-note">
+      <div className="eyebrow">ROOM FOR DISCOVERY</div>
+      <h2>
+        Good questions <br />
+        start with a <br />
+        little curiosity.
+      </h2>
+      <p>
+        Step outside your usual reading. A different field can offer a whole new
+        perspective.
+      </p>
+      <div className="note-bottom">Four topics. More possibilities.</div>
+    </aside>
+  )
+}
+
 function Home() {
   const session = useSession()
   const [params] = useSearchParams()
@@ -196,118 +190,107 @@ function Home() {
           </div>
           <h1>
             A wider world.
-            <br />
-            <em>A curious mind.</em>
+            <br />A curious mind.
           </h1>
         </div>
         <p>
           A little perspective for your everyday.
-          <br />
-          Explore ideas across technology, the economy,
+          <br /> Explore ideas across technology, the economy,
           <br className="desktop-break" /> finance and music. Follow your
           curiosity.
         </p>
       </section>
-      <nav className="topics" aria-label="Filter by topic">
-        <button
-          aria-pressed={!topic}
-          className={!topic ? 'active' : ''}
-          onClick={() => update({ topic: '', page: '' })}
-        >
-          All topics <span>↗</span>
-        </button>
-        {topics.data?.map((item) => (
-          <button
-            key={item.slug}
-            aria-pressed={topic === item.slug}
-            className={topic === item.slug ? 'active' : ''}
-            onClick={() => update({ topic: item.slug, page: '' })}
-          >
-            {item.name}
-          </button>
-        ))}
-        <span className="edition">FROM THE SOURCES</span>
-      </nav>
-      <PageSize
-        key={size}
-        size={size}
-        onChange={(value) => update({ page_size: value, page: '' })}
-      />
-      {topics.isError && (
-        <p role="status" className="filter-error">
-          Topics are unavailable.{' '}
-          <button onClick={() => void topics.refetch()}>Retry topics</button>
-        </p>
-      )}
-      {articles.isPending ? (
-        <div className="notice" role="status">
-          Gathering your reading…
-        </div>
-      ) : articles.isError ? (
-        <Notice retry={() => void articles.refetch()} />
-      ) : items.length === 0 ? (
-        <div className="notice">
-          <h2>A fresh page.</h2>
-          <p>
-            There are no stories in this view yet. Try another topic or come
-            back later.
-          </p>
-        </div>
-      ) : (
-        <div aria-busy={articles.isFetching}>
-          {lead && (
-            <section className="lead-section">
-              <div className="section-title">
-                <h2>In focus</h2>
-              </div>
-              <ArticleCard article={lead} lead />
-            </section>
-          )}
-          <div className="reading-layout">
-            <section className="stories">
-              <div className="section-title">
-                <h2>
-                  {topic
-                    ? topics.data?.find((item) => item.slug === topic)?.name ||
-                      'Stories'
-                    : 'Across your world'}
-                </h2>
-                <span>
-                  {rest.length} {rest.length === 1 ? 'story' : 'stories'} to
-                  explore
-                </span>
-              </div>
-              {rest.map((article, index) => (
-                <ArticleCard key={article.id} article={article} index={index} />
-              ))}
-            </section>
-            <aside className="reading-note">
-              <span className="note-icon" aria-hidden="true">
-                ✳
-              </span>
-              <div className="eyebrow">ROOM FOR DISCOVERY</div>
-              <h2>
-                Good questions <br />
-                start with a <br />
-                <em>little curiosity.</em>
-              </h2>
-              <p>
-                Step outside your usual reading. A different field can offer a
-                whole new perspective.
-              </p>
-              <div className="note-bottom">
-                Four topics. More possibilities.
-              </div>
-            </aside>
-          </div>
-          <PageLinks
-            page={currentPage}
-            total={articles.data?.total_pages ?? 1}
-            onChange={(value) => update({ page: String(value) })}
-            label="Article pages"
+      <div className="reading-desk">
+        <aside className="reading-tools">
+          <nav className="topics" aria-label="Filter by topic">
+            <button
+              aria-pressed={!topic}
+              className={!topic ? 'active' : ''}
+              onClick={() => update({ topic: '', page: '' })}
+            >
+              All topics <span>↗</span>
+            </button>
+            {topics.data?.map((item) => (
+              <button
+                key={item.slug}
+                aria-pressed={topic === item.slug}
+                className={topic === item.slug ? 'active' : ''}
+                onClick={() => update({ topic: item.slug, page: '' })}
+              >
+                {item.name}
+              </button>
+            ))}
+            <span className="edition">FROM THE SOURCES</span>
+          </nav>
+          <PageSize
+            key={size}
+            size={size}
+            onChange={(value) => update({ page_size: value, page: '' })}
           />
+          {topics.isError && (
+            <p role="status" className="filter-error">
+              Topics are unavailable.{' '}
+              <button onClick={() => void topics.refetch()}>
+                Retry topics
+              </button>
+            </p>
+          )}
+          <ReadingNote />
+        </aside>
+        <div className="reading-stream">
+          {articles.isPending ? (
+            <div className="notice" role="status">
+              Gathering your reading…
+            </div>
+          ) : articles.isError ? (
+            <Notice retry={() => void articles.refetch()} />
+          ) : items.length === 0 ? (
+            <div className="notice">
+              <h2>A fresh page.</h2>
+              <p>
+                There are no stories in this view yet. Try another topic or come
+                back later.
+              </p>
+            </div>
+          ) : (
+            <div aria-busy={articles.isFetching}>
+              {lead && (
+                <section className="lead-section">
+                  <div className="section-title">
+                    <h2>In focus</h2>
+                  </div>
+                  <ArticleCard article={lead} lead />
+                </section>
+              )}
+              <div className="reading-layout">
+                <section className="stories">
+                  <div className="section-title">
+                    <h2>
+                      {topic
+                        ? topics.data?.find((item) => item.slug === topic)
+                            ?.name || 'Stories'
+                        : 'Across your world'}
+                    </h2>
+                    <span>
+                      {rest.length} {rest.length === 1 ? 'story' : 'stories'} to
+                      explore
+                    </span>
+                  </div>
+                  {rest.map((article) => (
+                    <ArticleCard key={article.id} article={article} />
+                  ))}
+                </section>
+              </div>
+              <PageLinks
+                page={currentPage}
+                total={articles.data?.total_pages ?? 1}
+                onChange={(value) => update({ page: String(value) })}
+                label="Article pages"
+              />
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </>
   )
 }
@@ -473,8 +456,8 @@ function SavedStories() {
         </div>
       ) : (
         <>
-          {saved.data.results.map((article, index) => (
-            <ArticleCard article={article} index={index} key={article.id} />
+          {saved.data.results.map((article) => (
+            <ArticleCard article={article} key={article.id} />
           ))}
           <PageLinks
             page={saved.data.page ?? page}
@@ -517,9 +500,6 @@ export default function App() {
       <div className="shell">
         <header className="header">
           <Link className="brand" to="/" aria-label="Worldline home">
-            <span className="brand-mark" aria-hidden="true">
-              w.
-            </span>
             worldline<span className="brand-period">.</span>
           </Link>
           <div className="header-right">
