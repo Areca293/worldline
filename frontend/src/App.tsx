@@ -16,7 +16,13 @@ import {
   timestampLabel,
 } from './api'
 import type { Article, ArticlePage, Health, Topic } from './api'
-import { AccountNav, BookmarkButton, Login, useSession } from './account'
+import {
+  AccountNav,
+  BookmarkButton,
+  Login,
+  Register,
+  useSession,
+} from './account'
 
 function ConnectionStatus() {
   const health = useQuery({
@@ -524,6 +530,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/articles/:slug" element={<Detail />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             <Route path="/bookmarks" element={<SavedStories />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

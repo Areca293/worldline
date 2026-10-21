@@ -166,7 +166,8 @@ M1 的登录使用 Django 会话，收藏保存到 PostgreSQL，每条收藏都�
 创建管理员：在 `backend` 执行 `uv run python manage.py createsuperuser`；随后可在
 http://127.0.0.1:8000/admin/ 的 Users 中创建非 staff 的普通账号。已有账号无需重建。
 网站右上角 Sign in 使用这些账号登录，Save story 保存，Saved stories 查看。
-不要把真实密码写进源码、文档或 Git。此版本没有公开注册，也没有默认测试账号。
+读者也可点击独立 Register 入口，用用户名、邮箱和密码自行注册；成功后自动登录。
+邮箱验证与密码找回尚未实现。不要把真实密码写进源码、文档或 Git；没有默认测试账号。
 
 桌面/手机视口的完整浏览器测试：先准备 Playwright Chromium 或已安装的 Chrome，
 在 `backend` 执行 `E2E_BROWSER_CHANNEL=chrome uv run pytest -m browser -q`。

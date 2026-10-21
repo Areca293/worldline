@@ -10,6 +10,7 @@ urlpatterns = [
     path("articles/<slug:slug>/bookmark/", views.BookmarkDetail.as_view()),
     path("bookmarks/", views.BookmarkList.as_view()),
     path("auth/session/", auth.SessionView.as_view()),
+    path("auth/register/", auth.RegisterView.as_view()),
     path("auth/login/", auth.LoginView.as_view()),
     path("auth/logout/", auth.LogoutView.as_view()),
 ]

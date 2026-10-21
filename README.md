@@ -87,10 +87,12 @@ cd backend
 uv run python manage.py createsuperuser
 ```
 
-Use [Django admin](http://127.0.0.1:8000/admin/) → Users to create normal reader
-accounts without staff/superuser permissions. Existing Django users can sign in
-at [the app login page](http://127.0.0.1:5173/login). Passwords are chosen locally;
-there is no default product password, automatic account creation or public registration.
+Readers can use the independent [registration page](http://127.0.0.1:5173/register)
+with a username, email, password and password confirmation. Registration validates
+password strength, creates a normal reader and signs them in. Email is stored privately;
+email verification and password recovery are not implemented yet. Existing users can
+[sign in](http://127.0.0.1:5173/login). Administrators may also create reader accounts
+in [Django admin](http://127.0.0.1:8000/admin/). There is no default product password.
 
 Select **Save story**, then **Saved stories**. Reloading retains your bookmarks.
 **Remove bookmark** removes only your own bookmark. Sign-out clears the client
@@ -98,7 +100,8 @@ cache of personalized content. Anonymous requests cannot list or change bookmark
 user IDs supplied in query strings or bodies do not select another user's records.
 
 Sessions use Django's HttpOnly cookie. Login, logout and bookmark writes require
-CSRF protection. Login has a basic 10-per-minute IP throttle using Django's local
+CSRF protection, including anonymous registration. Login has a 10-per-minute IP
+throttle and registration a 5-per-minute IP throttle using Django's local
 cache; a shared throttle store and production hardening are needed before public deployment.
 
 ## Sources and dates

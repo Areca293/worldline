@@ -29,7 +29,10 @@ export interface Health {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number) {
+  constructor(
+    public status: number,
+    public details?: Record<string, string | string[]>,
+  ) {
     super('Unable to load content.')
   }
 }
@@ -86,7 +89,10 @@ export async function write<T>(
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
-  if (!response.ok) throw new ApiError(response.status)
+  if (!response.ok) {
+    const details = await response.json().catch(() => undefined)
+    throw new ApiError(response.status, details)
+  }
   return response.json() as Promise<T>
 }
 

@@ -153,3 +153,75 @@ def test_normal_feed_hides_samples_and_balances_topics(readers):
     assert len({row["topic"]["slug"] for row in data["results"][:2]}) == 2
     assert not any(row["is_sample"] for row in data["results"])
     assert client.get("/api/articles/?topic=technology").json()["count"] == 1
+
+
+@pytest.mark.django_db
+def test_registration_creates_only_a_reader_and_persists_session(django_user_model):
+    cache.clear()
+    client = APIClient(enforce_csrf_checks=True)
+    data = {
+        "username": "new-reader",
+        "email": "reader@example.com",
+        "password": "QuietStars!7284",
+        "password_confirm": "QuietStars!7284",
+        "is_staff": True,
+        "is_superuser": True,
+    }
+    assert client.post("/api/auth/register/", data).status_code == 403
+    token = csrf(client)
+    assert (
+        client.post(
+            "/api/auth/register/", data, HTTP_X_CSRFTOKEN=token, HTTP_ORIGIN="https://evil.example"
+        ).status_code
+        == 403
+    )
+    result = client.post("/api/auth/register/", data, HTTP_X_CSRFTOKEN=token)
+    assert result.status_code == 201
+    user = django_user_model.objects.get(username="new-reader")
+    assert user.email == "reader@example.com"
+    assert user.check_password(data["password"])
+    assert not user.is_staff and not user.is_superuser
+    assert "email" not in result.json()["user"]
+    refreshed = APIClient()
+    refreshed.cookies = client.cookies
+    assert refreshed.get("/api/auth/session/").json()["user"]["id"] == user.pk
+    assert result.json()["csrfToken"] != token
+    client.post("/api/auth/logout/", HTTP_X_CSRFTOKEN=csrf(client))
+    duplicate = client.post("/api/auth/register/", data, HTTP_X_CSRFTOKEN=csrf(client))
+    assert duplicate.status_code == 400 and "username" in duplicate.json()
+    assert django_user_model.objects.count() == 1
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "changes, field",
+    [
+        ({"email": "not-email"}, "email"),
+        ({"password_confirm": "different"}, "password_confirm"),
+        ({"password": "12345678", "password_confirm": "12345678"}, "password"),
+        ({"username": "bad name!"}, "username"),
+    ],
+)
+def test_registration_rejects_invalid_information(changes, field, django_user_model):
+    cache.clear()
+    client = APIClient(enforce_csrf_checks=True)
+    data = {
+        "username": "reader",
+        "email": "reader@example.com",
+        "password": "QuietStars!7284",
+        "password_confirm": "QuietStars!7284",
+        **changes,
+    }
+    result = client.post("/api/auth/register/", data, HTTP_X_CSRFTOKEN=csrf(client))
+    assert result.status_code == 400 and field in result.json()
+    assert django_user_model.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_registration_is_throttled():
+    cache.clear()
+    client = APIClient(enforce_csrf_checks=True)
+    token = csrf(client)
+    for _ in range(5):
+        assert client.post("/api/auth/register/", {}, HTTP_X_CSRFTOKEN=token).status_code == 400
+    assert client.post("/api/auth/register/", {}, HTTP_X_CSRFTOKEN=token).status_code == 429

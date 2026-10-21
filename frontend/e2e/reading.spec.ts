@@ -68,3 +68,30 @@ test('read, filter, sign in, persist a private bookmark, switch users and remove
   await expect(page.getByText('No saved stories yet.')).toBeVisible()
   expect(errors).toEqual([])
 })
+
+test('registers a reader, keeps the session after reload and can sign in again', async ({
+  page,
+}, testInfo) => {
+  const username = `new-${testInfo.project.name}`
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Register', exact: true }).click()
+  await page.getByLabel('Username', { exact: true }).fill(username)
+  await page
+    .getByLabel('Email', { exact: true })
+    .fill(`${username}@example.com`)
+  await page
+    .getByLabel('Password', { exact: true })
+    .fill(process.env.E2E_PASSWORD!)
+  await page
+    .getByLabel('Confirm password', { exact: true })
+    .fill(process.env.E2E_PASSWORD!)
+  await page
+    .getByRole('button', { name: 'Create account', exact: true })
+    .click()
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
+  await page.reload()
+  await expect(page.getByText(username, { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await signIn(page, username)
+  await expect(page.getByText(username, { exact: true })).toBeVisible()
+})
