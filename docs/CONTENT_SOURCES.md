@@ -131,3 +131,28 @@ Stable GitHub numeric IDs preserve bookmarks across repository renames; conflict
 URLs or sources are skipped. Project creation dates never become "published today"
 when stars change. Company-name searches additionally match source names; ordinary
 search remains stored keyword search, not a natural-language AI answer engine.
+
+## Optional publisher thumbnails (2026-10-22)
+
+The reader now retains an optional image URL and feed credit, without downloading
+or archiving image files. Reviewed feed media fields (`media:thumbnail`, image
+`media:content` and image enclosures) are used for Google AI, DeepMind, MIT Research
+and Cloudflare. Host/path allowlists live in `news/images.py`; no article HTML,
+Open Graph scraping, repository avatars or full-content fallback is used. Other
+sources remain text-only until their media endpoints and usage are reviewed.
+
+Images link to the source article and show the supplied credit (or “Via [publisher]”
+when the feed has none). MIT's published image terms allow noncommercial use with
+attribution; original image colours are preserved and animated GIF/SVG URLs are
+omitted. Source thumbnails are editorial content, not UI colour accents.
+Google/Cloudflare feed images are remotely embedded for the existing local personal
+reader, not copied as distributable project assets or granted a blanket license.
+Review publisher/item-specific rights again before public deployment.
+
+Browser images use no-referrer, lazy loading and async decoding. Invalid/unreviewed
+URLs are omitted by the API; load failures remove the media slot. Browser requests
+go directly to reviewed media origins, which receive the usual network request.
+No arbitrary server-side image proxy or new credential is introduced. Missing images
+are never replaced with generated illustrations. Previously documented “no photos”
+remains the rule for all other feeds; these four reviewed thumbnail uses are the
+explicit exception requested by the user.

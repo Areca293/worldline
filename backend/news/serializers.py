@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework import serializers
 
+from .images import safe_image_url
 from .models import Article, Repository, Source, Topic
 
 
@@ -56,6 +57,11 @@ class RepositorySerializer(serializers.ModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    def get_image_url(self, article):
+        return safe_image_url(article.image_url, article.source.feed_url)
+
     repository = RepositorySerializer(read_only=True)
 
     topic = TopicSerializer(read_only=True)
@@ -71,6 +77,8 @@ class ArticleSerializer(serializers.ModelSerializer):
             "topic",
             "source",
             "summary",
+            "image_url",
+            "image_credit",
             "original_url",
             "published_at",
             "source_updated_at",

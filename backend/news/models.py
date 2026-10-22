@@ -56,6 +56,8 @@ class Article(models.Model):
     topic = models.ForeignKey(Topic, on_delete=models.PROTECT)
     source = models.ForeignKey(Source, on_delete=models.PROTECT)
     summary = models.TextField(blank=True)
+    image_url = models.URLField(max_length=2048, blank=True)
+    image_credit = models.CharField(max_length=240, blank=True)
     original_url = models.URLField(max_length=2048, unique=True)
     source_entry_id = models.TextField(blank=True)
     source_entry_hash = models.CharField(max_length=64, blank=True)

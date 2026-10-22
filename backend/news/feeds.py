@@ -19,6 +19,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from .catalog import APPROVED_FEED_URLS, GITHUB_COLLECTIONS
+from .images import feed_image
 from .models import Article, Source
 
 MAX_FEED_BYTES = 2 * 1024 * 1024
@@ -242,9 +243,12 @@ def import_feed(source, data):
                 # A canonical URL already belongs to another identity: preserve provenance.
                 result.skipped += 1
                 continue
+            image_url, image_credit = feed_image(entry, source)
             values = {
                 "title": title,
                 "summary": summary,
+                "image_url": image_url,
+                "image_credit": image_credit,
                 "original_url": url,
                 "topic_id": source.topic_id,
                 "published_at": parsed_date(entry, "published"),
