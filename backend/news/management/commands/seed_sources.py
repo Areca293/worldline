@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from news.catalog import FEEDS
+from news.catalog import FEEDS, TOPICS
 from news.models import Source, Topic
 
 
@@ -10,6 +10,8 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        for name, slug in TOPICS:
+            Topic.objects.get_or_create(slug=slug, defaults={"name": name})
         created = 0
         for item in FEEDS:
             topic, _ = Topic.objects.get_or_create(
