@@ -1,0 +1,65 @@
+name: Verify Worldline
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17.9
+        env:
+          POSTGRES_DB: worldline
+          POSTGRES_USER: worldline
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U worldline -d worldline"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DJANGO_SECRET_KEY: ci-only-not-for-public-use-0123456789abcdefghijklmnopqrstuvwxyz
+      DJANGO_DEBUG: "true"
+      POSTGRES_DB: worldline
+      POSTGRES_USER: worldline
+      POSTGRES_PASSWORD: ci-only-password
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      TEST_REDIS_URL: redis://127.0.0.1:6379/15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.22"
+      - run: uv sync --locked
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
+      - run: |
+          uv run python manage.py check
+          uv run python manage.py makemigrations --check --dry-run
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run pytest
+          uv run pytest -m integration -q
+        working-directory: backend
+      - run: npm test && npm run build
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: uv run pytest -m browser -q
+        working-directory: backend
+      - run: docker build --target web -t worldline-ci .

@@ -1,4 +1,54 @@
 services:
+  worker:
+    profiles: ["scheduler"]
+    build:
+      context: .
+      target: api
+    image: worldline-api:dev
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=2"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  beat:
+    profiles: ["scheduler"]
+    build:
+      context: .
+      target: api
+    image: worldline-api:dev
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+    command: ["celery", "-A", "config", "beat", "--loglevel=INFO", "--schedule=/state/celerybeat-schedule", "--pidfile=/state/celerybeat.pid"]
+    volumes:
+      - beat_data:/state
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   redis:
     image: redis:7.4-alpine
     command: ["redis-server", "--appendonly", "yes"]
@@ -29,3 +79,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  beat_data:

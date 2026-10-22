@@ -2,6 +2,7 @@ import logging
 
 from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
+from django.conf import settings
 from django.db import DatabaseError
 
 from .feeds import FeedError
@@ -17,7 +18,9 @@ def update_source(self, source_id):
         refresh_source(source_id, trigger="scheduled", attempt=self.request.retries + 1)
     except (FeedError, DatabaseError, SoftTimeLimitExceeded):
         # No original exception in the broker payload or task failure log.
-        raise self.retry(countdown=60 * 2**self.request.retries, expires=1800)
+        raise self.retry(
+            countdown=settings.FEED_RETRY_BASE_SECONDS * 2**self.request.retries, expires=1800
+        )
 
 
 @shared_task(bind=True, max_retries=3)

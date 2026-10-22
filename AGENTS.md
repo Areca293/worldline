@@ -12,3 +12,7 @@
   (or install Playwright Chromium and omit the environment variable). Uses a disposable test database.
 - Read `docs/CONTENT_SOURCES.md` before changing feeds. Keep URLs allowlisted and never store full feed content as a fallback summary.
 - Update `docs/PROGRESS.md` with actual test results and remaining limits.
+- M2: `TEST_REDIS_URL=redis://127.0.0.1:6379/15 uv run pytest -m integration -q`
+  verifies real Redis/Celery with isolated fixture data. Read `docs/OPERATIONS.md` for
+  scheduling, production setup and backup/restore. Public deployment/device acceptance
+  remains pending until a server/domain and a physical iPhone are available.

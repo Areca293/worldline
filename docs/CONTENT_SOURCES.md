@@ -54,8 +54,11 @@ constraints protect canonical URLs, source identities and user/article bookmarks
 Conflicting IDs/URLs are skipped rather than silently merging different stories
 or replacing their source attribution. Cross-source event clustering is not implemented.
 
-Manual runs fetch the current feed window, not an exhaustive archive. There is no
-scheduler, retry queue, last-success dashboard or full-text scraper in M1.
+Manual runs fetch the current feed window, not an exhaustive archive. M2 adds hourly
+Celery dispatch, bounded per-source retries and audited attempts/last-success times;
+see [operations](OPERATIONS.md). Feed endpoints and content policy are unchanged.
+There is still no full-text scraper. Timestamp tracking starts with M2; it does not
+invent success times for historical imports.
 
 ## Acceptance evidence
 

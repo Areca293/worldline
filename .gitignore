@@ -18,3 +18,6 @@ playwright-report/
 pgdata/
 celerybeat-schedule*
 celerybeat.pid
+staticfiles/
+backups/
+*.dump

@@ -18,6 +18,31 @@
   Django check、Ruff lint/format 通过，0004 索引迁移已应用。实看真实 moon 搜索
   命中 NASA 文章，390px 搜索布局正常；浏览器 503 场景是明确的错误视图模拟。
 
+- 阶段 3：提供 Gunicorn/Caddy 多阶段镜像与独立生产 Compose、安全 Cookie/CSRF、
+  HTTPS 与共享 Redis 限流；新增 GitHub Actions、真实 broker/worker 集成测试、
+  日志轮转、备份恢复与部署操作说明。CI 配置已写入，尚未推送，未宣称云端 CI 已运行。
+- 阶段 3 验证：后端 **48 passed**，Redis/Celery 集成 **1 passed**（真实队列与
+  worker，RSS 为明确的原创测试 fixture），Django check、迁移一致性、Ruff lint/format
+  通过。沿用阶段 2 的前端 6 passed、构建及桌面/手机 14 场景结果，前端此阶段未修改。
+  API 与 Web 镜像均构建成功。
+- 隔离生产容器验收：Caddy 本地 CA 严格校验证书，未忽略 TLS 错误或修改系统信任；
+  HTTPS 健康检查真实查询 PostgreSQL，SPA 路由、静态资源、注册/登录/退出、Secure
+  会话、CSRF 拒绝及私人收藏接口通过，worker ping 成功。pg_dump 恢复至新测试库，
+  核实 1 个测试账号和 22 条迁移记录；未覆盖正常数据库。check --deploy 仅保留
+  W005/W021：域名未定，尚未启用 HSTS 子域覆盖和 preload，操作文档已说明。
+- 本机 macOS 原生 Celery prefork 在执行任务前报错；已停止本次启动的原生 worker/Beat，
+  改用验证通过的 Linux Docker scheduler profile。现有前后端与数据库保持运行，
+  单一 Beat 和 worker 已启用；电脑休眠、断网或 Docker 停止时不能持续更新。
+- 真实后台抓取：2026-10-22 12:37 UTC 四个允许的官方来源均成功，新增 NASA 10 篇、
+  LOC 1 篇，其余内容保持；正式文章数由 87 增至 **98**，BEA 一条无效原文 URL 仍跳过。
+  实际数据库与页面均核实四来源成功时间；保留旧文章、样例和收藏，未用抓取时间替代发布日期。
+- 清理：隔离 HTTPS 验收容器及其专属卷、临时凭据/CA/备份已移除；停用的原生 Beat
+  临时状态库已删除。保留本机运行所需的数据卷。新增忽略 staticfiles/、backups/、
+  *.dump（前一阶段已忽略 Celery 状态/PID），避免提交生成资源与私人备份。
+- 当前结论：**M2 本地开发与部署准备完成；公开 HTTPS 部署及 iPhone Safari 真机验收
+  未完成**，待用户准备服务器和域名。未 push、未公开发布，未进入 M3。
+  后续步骤见 `OPERATIONS.md`；可尝试在首页组合关键词和领域，刷新后检查 URL 条件仍保留。
+
 ## 阅读页面重设计（2026-10-21）
 
 - 使用 frontend-design 技能，先明确手机碎片阅读、来源核验与私人收藏任务；方案见

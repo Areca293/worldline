@@ -4,6 +4,7 @@ from django.db.models.functions import RowNumber
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
+from redis.exceptions import RedisError
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
@@ -29,7 +30,7 @@ def health(request):
 
 class DatabaseErrorMixin:
     def handle_exception(self, exc):
-        if isinstance(exc, DatabaseError):
+        if isinstance(exc, (DatabaseError, RedisError)):
             return Response(
                 {"detail": "Content is temporarily unavailable. Please try again later."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,

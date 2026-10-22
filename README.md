@@ -3,21 +3,23 @@
 A mobile-first English reading home for technology, economy, finance and music.
 Worldline is a replaceable working name.
 
-**M1 is implemented and locally verified:** official RSS imports, attributed source
-excerpts, topic browsing, session sign-in and persistent private bookmarks. Updates
-are manual. Scheduled updates, search, AI, public hosting and iOS remain later work.
+**M2 local development and deployment preparation:** official RSS imports, scheduled
+updates/retries, source status, keyword search, registration and private bookmarks.
+Production containers and CI are included. Public HTTPS deployment and physical
+iPhone Safari acceptance await a server/domain; AI and iOS packaging remain later work.
 
 ## Architecture
 
 ```text
 Browser → React / TypeScript / Vite → /api/ → Django REST Framework → PostgreSQL
-Manual import command → reviewed RSS endpoints → PostgreSQL
+Celery Beat → Redis → Celery workers → reviewed RSS endpoints → PostgreSQL
+Manual import command → the same audited import path
 ```
 
 Vite proxies `/api/` to Django on port 8000, preserving the browser's Host for
 same-origin CSRF checks. All data access goes through Django. There are no paid
 services or external API keys. Production must also use a same-origin deployment;
-this repository currently contains local development configuration only.
+use `compose.production.yaml` for Caddy HTTPS, Gunicorn, workers and private data services.
 
 ```text
 frontend/src/App.tsx          Reading pages and topic navigation
@@ -26,10 +28,15 @@ frontend/src/api.ts           Typed API calls and CSRF-protected writes
 backend/news/models.py       Source, Topic, Article and Bookmark
 backend/news/feeds.py        Bounded download, parse and idempotent import
 backend/news/catalog.py      Reviewed source allowlist and usage notes
+backend/news/ingestion.py    Audited attempts and per-source overlap protection
+backend/news/tasks.py        Hourly dispatch and bounded retries
+backend/news/search.py       PostgreSQL keyword search and ranking
 backend/news/auth.py         Django session authentication
 backend/news/tests/          PostgreSQL, security and browser tests
 frontend/e2e/                Real-browser reading workflow
-compose.yaml                 Local persistent PostgreSQL
+compose.yaml                 Local PostgreSQL and Redis
+compose.production.yaml      Prepared production stack (not deployed)
+.github/workflows/ci.yml      Automated verification
 ```
 
 ## Prerequisites
@@ -45,7 +52,7 @@ From the repository root:
 
 ```sh
 test -f .env || cp .env.example .env
-docker compose up -d --wait db
+docker compose up -d --wait db redis
 ```
 
 The local `.env` is ignored by Git. Example credentials are for local development.
@@ -77,6 +84,10 @@ servers are already running, do not start another copy on the same ports.
 To refresh content later, run `uv run python manage.py import_feeds` from `backend`.
 Repeated imports update matching records and preserve their article IDs/bookmarks.
 One source failing does not block other sources or delete existing content.
+To enable hourly updates, keep one Celery worker and one Beat process running as
+described in [operations](docs/OPERATIONS.md). Running Django alone does not schedule
+updates. Feed run records are available in admin; source last-success times appear
+under **Source updates**. Missing historical records are shown as unknown.
 
 ## Accounts and saved stories
 
@@ -101,10 +112,17 @@ user IDs supplied in query strings or bodies do not select another user's record
 
 Sessions use Django's HttpOnly cookie. Login, logout and bookmark writes require
 CSRF protection, including anonymous registration. Login has a 10-per-minute IP
-throttle and registration a 5-per-minute IP throttle using Django's local
-cache; a shared throttle store and production hardening are needed before public deployment.
+throttle and registration a 5-per-minute IP throttle. Local development uses a local
+cache; the production settings use shared Redis behind a single trusted Caddy proxy.
 
 ## Reading controls
+
+**Search stories** searches stored titles and source excerpts using English keyword
+matching (including word stems), with titles ranked above excerpts. All significant
+words must match. It does not search the web or unavailable full articles. Searches
+accept up to 200 characters, combine with topics and pagination, and persist in the
+URL. **Search saved stories** only searches the signed-in reader's collection.
+Clear search restores browsing. Offline and failed requests have retry guidance.
 
 Article titles open the in-app detail. The diagonal arrow opens the original article
 in a new tab. The star at the lower right, aligned with the publication date, saves
@@ -115,7 +133,7 @@ Home and Saved stories provide numbered pages with the current page highlighted.
 The URL retains the selection across reloads; changing the topic or size resets the
 page. All loads the entire matching collection and can be slower for large libraries.
 
-`/api/articles/` and `/api/bookmarks/` accept `page` and `page_size` (a positive integer
+`/api/articles/` and `/api/bookmarks/` accept `q`, `page` and `page_size` (a positive integer
 or `all`). Responses include `count`, `results`, `next`, `previous`, `page`, `page_size`
 (null for All) and `total_pages`. Out-of-range pages resolve to the last available page,
 including when removing bookmarks shrinks a collection. All still respects the topic
@@ -183,22 +201,31 @@ curl -f http://127.0.0.1:5173/api/health/
 curl -f http://127.0.0.1:5173/api/articles/
 ```
 
-Health returns `{"status":"ok","database":"connected","stage":"M1"}` after a real
-SQL query. It does not assert feed freshness; check source dates and import output.
+Health returns `{"status":"ok","database":"connected","stage":"M2"}` after a real
+SQL query. It does not assert worker health or feed freshness. `/api/sources/` exposes
+active sources' last attempt/success and status without private diagnostics.
 Actual evidence and outstanding limits are in `docs/PROGRESS.md`.
+
+Real Redis/Celery integration, production settings, HTTPS configuration, logs,
+database backup/restore and device acceptance are documented in
+[operations](docs/OPERATIONS.md). The integration test uses a separate Redis DB,
+random queues, disposable PostgreSQL data and explicitly synthetic RSS fixtures.
 
 ## Stop, restart and troubleshoot
 
-Stop frontend/backend with Ctrl+C in their terminals. Use `docker compose stop db`
-to stop PostgreSQL, then `docker compose up -d --wait db` to restart it. The named
-volume preserves data. `docker compose down -v` deletes that data and is not a
-normal restart step.
+Stop frontend/backend with Ctrl+C in their terminals. If scheduled updates are enabled,
+stop them first with `docker compose --profile scheduler stop worker beat`, then use
+`docker compose stop db redis`. Restart data services with
+`docker compose up -d --wait db redis`, then restart worker/Beat as described in
+operations. Named volumes preserve data. `docker compose down -v` deletes that data
+and is not a normal restart step.
 
 - Database unavailable: check `docker compose ps` and `docker compose logs db`.
 - Missing tables: run migrations before starting Django.
 - Empty home: run `seed_sources` and `import_feeds`; samples are intentionally hidden.
-- A feed fails: the command reports the source and exits nonzero after processing
-  the remaining sources. Check its URL/availability; retry manually later.
+- A feed fails: inspect Sources/Feed runs in admin. Scheduled tasks retry up to three
+  times; manual commands exit nonzero after processing other sources. Old stories
+  remain. Do not change publication dates to make old content look fresh.
 - Sign-in fails: use a locally created active Django user; keep frontend and API
   on the documented origin. Do not disable CSRF to resolve a configuration problem.
 - `npm run preview` serves build files only and does not proxy the API. Use the dev
@@ -206,8 +233,8 @@ normal restart step.
 
 ## Next milestones
 
-M2 adds scheduled updates/retries, last-success visibility, search, CI and HTTPS
-deployment. M3 adds cited AI search and language assistance. See
+M2 public deployment and physical Safari acceptance remain pending. M3 adds cited
+AI search and language assistance. See
 `docs/PROJECT_CONTEXT.md` for product scope. No repository or website has been
 published by this work. Choose a license and review personal context documents
 before making the repository public.

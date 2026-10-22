@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 import pytest
-from celery.exceptions import Retry
+from celery.exceptions import MaxRetriesExceededError, Retry
 from django.db import connection
 
 from news.catalog import FEEDS
@@ -60,6 +60,12 @@ def test_retry_backoff_is_bounded_and_disabled_sources_are_not_fetched(source):
                     assert queued.call_args.kwargs["countdown"] == 60 * 2**attempt
             finally:
                 update_source.pop_request()
+        update_source.push_request(retries=3, called_directly=False)
+        try:
+            with pytest.raises(MaxRetriesExceededError):
+                update_source.run(source.pk)
+        finally:
+            update_source.pop_request()
     Source.objects.filter(pk=source.pk).update(is_active=False)
     with patch("news.ingestion.fetch_feed") as fetch:
         assert refresh_source(source.pk) is None
