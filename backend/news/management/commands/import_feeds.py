@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import DatabaseError
 
-from news.feeds import FeedError, fetch_feed, import_feed
+from news.feeds import FeedError
+from news.ingestion import refresh_source
 from news.models import Source
 
 
@@ -24,11 +25,14 @@ class Command(BaseCommand):
         failures = 0
         for source in sources:
             try:
-                result = import_feed(source, fetch_feed(source.feed_url))
+                result = refresh_source(source.pk)
             except (FeedError, DatabaseError) as exc:
                 failures += 1
                 message = str(exc) if isinstance(exc, FeedError) else "Database write failed."
                 self.stderr.write(f"Source {source.pk}: {message}")
+                continue
+            if result is None:
+                self.stdout.write(f"{source.name}: skipped (inactive or update already running)")
                 continue
             self.stdout.write(
                 f"{source.name}: created={result.created}, updated={result.updated}, "

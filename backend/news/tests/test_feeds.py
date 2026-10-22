@@ -131,7 +131,7 @@ def test_failure_of_one_source_does_not_prevent_another(source):
         feed_url=FEEDS[1]["feed_url"],
     )
     with patch(
-        "news.management.commands.import_feeds.fetch_feed",
+        "news.ingestion.fetch_feed",
         side_effect=[FeedError("Timeout."), rss(item())],
     ):
         with pytest.raises(CommandError, match="1 source"):

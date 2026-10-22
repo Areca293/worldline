@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from .catalog import APPROVED_FEED_URLS
 
@@ -26,6 +27,9 @@ class Source(models.Model):
     is_active = models.BooleanField(default=False)
     terms_url = models.URLField(max_length=500, blank=True)
     usage_notes = models.TextField(blank=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    last_success_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=120, blank=True)
 
     class Meta:
         constraints = [
@@ -84,3 +88,26 @@ class Bookmark(models.Model):
             models.UniqueConstraint(fields=["user", "article"], name="unique_user_bookmark")
         ]
         ordering = ["-created_at", "-id"]
+
+
+class FeedRun(models.Model):
+    source = models.ForeignKey(Source, on_delete=models.CASCADE, related_name="feed_runs")
+    trigger = models.CharField(
+        max_length=12, choices=[("manual", "Manual"), ("scheduled", "Scheduled")]
+    )
+    attempt = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(
+        max_length=12,
+        choices=[("running", "Running"), ("success", "Success"), ("failed", "Failed")],
+    )
+    started_at = models.DateTimeField(default=timezone.now)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    error = models.CharField(max_length=120, blank=True)
+    created = models.PositiveIntegerField(default=0)
+    updated = models.PositiveIntegerField(default=0)
+    unchanged = models.PositiveIntegerField(default=0)
+    skipped = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["-started_at", "-id"]
+        indexes = [models.Index(fields=["source", "-started_at"], name="feed_run_source_started")]

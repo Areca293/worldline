@@ -1,11 +1,19 @@
 from django.contrib import admin
 
-from .models import Article, Bookmark, Source, Topic
+from .models import Article, Bookmark, FeedRun, Source, Topic
 
 
 @admin.register(Source)
 class SourceAdmin(admin.ModelAdmin):
-    list_display = ["name", "topic", "is_active", "feed_url"]
+    list_display = [
+        "name",
+        "topic",
+        "is_active",
+        "last_attempt_at",
+        "last_success_at",
+        "last_error",
+    ]
+    readonly_fields = ["last_attempt_at", "last_success_at", "last_error"]
     list_filter = ["is_active", "topic"]
     search_fields = ["name"]
 
@@ -28,3 +36,27 @@ class BookmarkAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Topic)
+
+
+@admin.register(FeedRun)
+class FeedRunAdmin(admin.ModelAdmin):
+    list_display = [
+        "source",
+        "trigger",
+        "attempt",
+        "status",
+        "started_at",
+        "finished_at",
+        "created",
+        "updated",
+        "skipped",
+    ]
+    list_filter = ["status", "trigger", "source"]
+    list_select_related = ["source"]
+    readonly_fields = [field.name for field in FeedRun._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

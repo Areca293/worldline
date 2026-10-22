@@ -16,3 +16,5 @@ playwright-report/
 *.log
 *.sqlite3
 pgdata/
+celerybeat-schedule*
+celerybeat.pid
