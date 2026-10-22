@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import Article, Source, Topic
+from .models import Article, Repository, Source, Topic
 
 
 class TopicSerializer(serializers.ModelSerializer):
@@ -35,7 +35,29 @@ class SourceStatusSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "website_url", "last_attempt_at", "last_success_at", "status"]
 
 
+class RepositorySerializer(serializers.ModelSerializer):
+    is_stale = serializers.SerializerMethodField()
+
+    def get_is_stale(self, repo):
+        return repo.observed_at < timezone.now() - timedelta(hours=2)
+
+    class Meta:
+        model = Repository
+        fields = [
+            "full_name",
+            "stars",
+            "license",
+            "observed_at",
+            "pushed_at",
+            "baseline_at",
+            "star_change",
+            "is_stale",
+        ]
+
+
 class ArticleSerializer(serializers.ModelSerializer):
+    repository = RepositorySerializer(read_only=True)
+
     topic = TopicSerializer(read_only=True)
     source = SourceSerializer(read_only=True)
     is_bookmarked = serializers.BooleanField(read_only=True, default=False)
@@ -56,4 +78,5 @@ class ArticleSerializer(serializers.ModelSerializer):
             "is_sample",
             "featured",
             "is_bookmarked",
+            "repository",
         ]

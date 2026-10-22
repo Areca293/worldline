@@ -95,3 +95,39 @@ Rejected candidates: Anthropic's guessed news RSS returned 404, Microsoft's old 
 feed returned 410, ECB failed certificate validation, and the old Google Security
 feed redirected to HTTP. No TLS or URL safeguards were relaxed. Anthropic company
 news is not covered by a direct news feed in this catalog.
+
+## GitHub repository collections
+
+Two official [repository search API](https://docs.github.com/en/rest/search/search#search-repositories)
+collections are fetched hourly without a token. Skills use `topic:agent-skills`,
+at least 10 stars, sorted by total stars. General projects use at least 100 stars,
+sorted by recent update. Both require a push in the past 30 days and exclude forks
+and archived repositories. Each response is capped at 30 candidates; items without
+an identified SPDX license are skipped. License metadata is reported, not a license
+compatibility or code-security assessment. This is a small discovery sample, not
+GitHub Trending, a complete index, or a ranking of all recently growing projects.
+
+Broad star-sorted/date-filtered searches returned empty or incomplete results during
+review; general discovery therefore uses the verified recent-update query. An
+incomplete result is rejected, logged and retried rather than labeled a successful
+complete update. GitHub's unauthenticated search limit is 10 requests/minute;
+normal operation uses two requests/hour, with bounded retries on failure.
+
+Only repository name, description, topics, original URL, creation/push dates,
+license and aggregate star counts are kept. No code, README bodies or personal
+stargazer lists are fetched. [API terms](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#h-api-terms)
+apply. Repository content is never executed or interpreted as instructions.
+
+One observation per repository/hour is retained for eight days. Net star change
+compares the current observation with the nearest actual observation 24–26 hours
+older. No baseline means null, not zero; negative changes remain negative. The
+exact baseline/end timestamps accompany the metric. Observations over two hours
+old are marked stale and excluded from growth ordering. Projects that leave the
+sampling window remain readable, with their last observed values; a later sample
+may resume tracking. First-day data cannot establish historical growth. Laptop
+sleep or missed updates may leave the baseline unavailable.
+
+Stable GitHub numeric IDs preserve bookmarks across repository renames; conflicting
+URLs or sources are skipped. Project creation dates never become "published today"
+when stars change. Company-name searches additionally match source names; ordinary
+search remains stored keyword search, not a natural-language AI answer engine.

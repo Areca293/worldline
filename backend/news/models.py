@@ -116,3 +116,30 @@ class FeedRun(models.Model):
     class Meta:
         ordering = ["-started_at", "-id"]
         indexes = [models.Index(fields=["source", "-started_at"], name="feed_run_source_started")]
+
+
+class Repository(models.Model):
+    article = models.OneToOneField(Article, on_delete=models.CASCADE, related_name="repository")
+    github_id = models.PositiveBigIntegerField(unique=True)
+    full_name = models.CharField(max_length=240)
+    stars = models.PositiveIntegerField()
+    license = models.CharField(max_length=100)
+    observed_at = models.DateTimeField()
+    pushed_at = models.DateTimeField(null=True, blank=True)
+    baseline_at = models.DateTimeField(null=True, blank=True)
+    star_change = models.IntegerField(null=True, blank=True)
+
+
+class StarObservation(models.Model):
+    repository = models.ForeignKey(
+        Repository, on_delete=models.CASCADE, related_name="observations"
+    )
+    hour = models.DateTimeField()
+    observed_at = models.DateTimeField()
+    stars = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["repository", "hour"], name="unique_repo_hour")
+        ]
+        indexes = [models.Index(fields=["repository", "observed_at"], name="repo_observed_at")]

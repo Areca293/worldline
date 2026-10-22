@@ -7,9 +7,7 @@ from news.models import Source
 
 
 class Command(BaseCommand):
-    help = (
-        "Manually import active, reviewed RSS/Atom feeds. One failure does not block other sources."
-    )
+    help = "Manually import active, reviewed RSS/Atom and GitHub sources. One failure does not block other sources."
 
     def add_arguments(self, parser):
         parser.add_argument("--source", type=int, help="Import a single source by its admin ID.")

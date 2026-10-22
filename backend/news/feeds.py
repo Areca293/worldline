@@ -18,7 +18,7 @@ from defusedxml.ElementTree import fromstring
 from django.db import transaction
 from django.db.models import Q
 
-from .catalog import APPROVED_FEED_URLS
+from .catalog import APPROVED_FEED_URLS, GITHUB_COLLECTIONS
 from .models import Article, Source
 
 MAX_FEED_BYTES = 2 * 1024 * 1024
@@ -104,6 +104,11 @@ def canonical_url(value):
 def fetch_feed(url):
     if url not in APPROVED_FEED_URLS:
         raise FeedError("Feed URL is not on the reviewed allowlist.")
+    github = url in GITHUB_COLLECTIONS
+    if github:
+        from .repositories import collection_url
+
+        url = collection_url(url)
     host = urlsplit(url).hostname
     try:
         addresses = [item[4][0] for item in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)]
@@ -126,7 +131,9 @@ def fetch_feed(url):
                 headers={
                     "Host": host,
                     "User-Agent": "Worldline/0.2 (personal RSS reader)",
-                    "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
+                    "Accept": "application/vnd.github+json"
+                    if github
+                    else "application/rss+xml, application/atom+xml, application/xml, text/xml",
                     "Accept-Encoding": "identity",
                 },
                 redirect=False,
@@ -200,6 +207,10 @@ def parse_entries(data):
 
 
 def import_feed(source, data):
+    if source.feed_url in GITHUB_COLLECTIONS:
+        from .repositories import import_repositories
+
+        return import_repositories(source, data)
     entries = parse_entries(data)
     result = ImportResult()
     # Lock the source so two manual imports cannot race on its stable entry IDs.

@@ -1,12 +1,16 @@
+from datetime import timedelta
+
 from django.db import DatabaseError, connection
 from django.db.models import BooleanField, Exists, F, OuterRef, Value, Window
 from django.db.models.functions import RowNumber
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from redis.exceptions import RedisError
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -44,7 +48,9 @@ def articles_for(user):
         if user.is_authenticated
         else Value(False, output_field=BooleanField())
     )
-    return Article.objects.select_related("topic", "source").annotate(is_bookmarked=saved)
+    return Article.objects.select_related("topic", "source", "repository").annotate(
+        is_bookmarked=saved
+    )
 
 
 class TopicList(DatabaseErrorMixin, generics.ListAPIView):
@@ -73,8 +79,21 @@ class ArticleList(DatabaseErrorMixin, generics.ListAPIView):
         if topic:
             articles = articles.filter(topic__slug=topic)
         query = self.request.query_params.get("q", "").strip()
+        articles = search_articles(articles, query)
+        sort = self.request.query_params.get("sort", "")
+        if sort not in {"", "stars", "growth"}:
+            raise ValidationError({"sort": "Choose stars or growth, or leave sort empty."})
+        if sort:
+            articles = articles.filter(repository__isnull=False)
+            if sort == "growth":
+                articles = articles.filter(
+                    repository__observed_at__gte=timezone.now() - timedelta(hours=2),
+                    repository__star_change__isnull=False,
+                )
+                return articles.order_by("-repository__star_change", "-repository__stars", "id")
+            return articles.order_by("-repository__stars", "id")
         if query:
-            return search_articles(articles, query)
+            return articles
         if topic:
             return articles
         # Round-robin across topics, newest published story within each topic first.

@@ -1,5 +1,7 @@
 """Reviewed public feed endpoints. Add sources here only after reviewing their terms."""
 
+from urllib.parse import urlencode
+
 FEEDS = [
     {
         "name": "NASA",
@@ -145,5 +147,39 @@ TOPICS = [
     ("Science", "science"),
     ("Security", "security"),
 ]
+
+# Stable source identities; the downloader adds a server-controlled 30-day activity window.
+
+GITHUB_COLLECTIONS = {}
+for name, topic, slug, query in [
+    (
+        "GitHub Agent Skills",
+        "Agents & Skills",
+        "agents-skills",
+        "topic:agent-skills stars:>=10 archived:false fork:false",
+    ),
+    (
+        "GitHub Active Open Source",
+        "Open Source",
+        "open-source",
+        "stars:>=100 archived:false fork:false",
+    ),
+]:
+    sort = "stars" if slug == "agents-skills" else "updated"
+    endpoint = "https://api.github.com/search/repositories?" + urlencode(
+        {"q": query, "sort": sort, "order": "desc", "per_page": 30}
+    )
+    GITHUB_COLLECTIONS[endpoint] = query
+    FEEDS.append(
+        {
+            "name": name,
+            "topic": topic,
+            "slug": slug,
+            "website_url": "https://github.com/",
+            "feed_url": endpoint,
+            "terms_url": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#h-api-terms",
+            "usage_notes": "Official public repository search API. Up to 30 recently pushed candidates per collection: skills by total stars, general projects by recent update; only repositories with an identified license. Metadata and hourly aggregate star snapshots only, no code or stargazer identities. Not GitHub Trending or a comprehensive ranking.",
+        }
+    )
 
 APPROVED_FEED_URLS = frozenset(item["feed_url"] for item in FEEDS)

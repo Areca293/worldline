@@ -1,5 +1,5 @@
 from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
-from django.db.models import F
+from django.db.models import F, Q
 from rest_framework.exceptions import ValidationError
 
 
@@ -18,7 +18,7 @@ def search_articles(queryset, text):
     query = SearchQuery(text, config="english", search_type="plain")
     return (
         queryset.annotate(search_document=article_vector())
-        .filter(search_document=query)
+        .filter(Q(search_document=query) | Q(source__name__icontains=text))
         .annotate(search_rank=SearchRank(article_vector(), query))
         .order_by("-search_rank", F("published_at").desc(nulls_last=True), "-id")
     )
