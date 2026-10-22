@@ -23,7 +23,9 @@ it('shows an honest error and retry action when the API fails', async () => {
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
   mount()
   expect(await screen.findByRole('button', { name: /Try again/ })).toBeVisible()
-  expect(screen.getByText(/Stories from official feeds/)).toBeVisible()
+  expect(
+    screen.getByText(/Stories and projects from reviewed sources/),
+  ).toBeVisible()
   expect(await screen.findByText('Connection unavailable')).toBeVisible()
 })
 

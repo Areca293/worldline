@@ -14,7 +14,8 @@ from pathlib import Path
 import pytest
 from django.utils import timezone
 
-from news.models import Article, Source, Topic
+from news.catalog import TOPICS
+from news.models import Article, Repository, Source, Topic
 
 
 @pytest.mark.browser
@@ -53,6 +54,36 @@ def test_reading_in_real_browser(live_server, django_user_model, settings, tmp_p
             for n in range(24)
         ]
     )
+    # Original repository fixtures, only in this disposable browser-test database.
+    for name, slug in TOPICS:
+        Topic.objects.get_or_create(slug=slug, defaults={"name": name})
+    repo_source = Source.objects.create(
+        name="GitHub browser fixture", website_url="https://github.com/"
+    )
+    for name, stars, change, stale, topic_slug in [
+        ("fixture/agent-skill", 120, None, False, "agents-skills"),
+        ("fixture/growing-project", 300, 30, False, "open-source"),
+        ("fixture/stale-project", 1000, 200, True, "open-source"),
+    ]:
+        article = Article.objects.create(
+            title=name,
+            source=repo_source,
+            topic=Topic.objects.get(slug=topic_slug),
+            original_url=f"https://github.com/{name}",
+            summary="Original repository fixture for browser acceptance.",
+            published_at=timezone.now() - timedelta(days=365),
+        )
+        observed = timezone.now() - timedelta(hours=3 if stale else 0)
+        Repository.objects.create(
+            article=article,
+            github_id=stars,
+            full_name=name,
+            stars=stars,
+            license="MIT",
+            observed_at=observed,
+            star_change=change,
+            baseline_at=observed - timedelta(hours=24) if change is not None else None,
+        )
     with socket.socket() as available:
         available.bind(("127.0.0.1", 0))
         port = available.getsockname()[1]

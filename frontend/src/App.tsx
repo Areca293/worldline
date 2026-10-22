@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { DiscoveryOrder, RepositoryStats } from './repositories'
 import { OfflineNotice, SearchStories, SourceUpdates } from './discovery'
 import { PageLinks, PageSize, useReadingPages } from './pagination'
 import { useQuery } from '@tanstack/react-query'
@@ -109,8 +110,10 @@ function ArticleCard({
               href={safeExternalUrl(article.original_url)}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Open original article: ${article.title} (opens in a new tab)`}
-              title="Open original article"
+              aria-label={`${article.repository ? 'Open repository' : 'Open original article'}: ${article.title} (opens in a new tab)`}
+              title={
+                article.repository ? 'Open repository' : 'Open original article'
+              }
             >
               <span aria-hidden="true">↗</span>
             </a>
@@ -120,6 +123,7 @@ function ArticleCard({
           {article.summary ||
             'No summary was provided by the source. Open the original article to read more.'}
         </p>
+        <RepositoryStats article={article} />
         <a
           className="card-source"
           href={safeExternalUrl(article.source.website_url)}
@@ -131,6 +135,7 @@ function ArticleCard({
         <div className="card-footer">
           {article.published_at ? (
             <time dateTime={article.published_at}>
+              {article.repository ? 'Created ' : ''}
               {publishedLabel(article.published_at)}
             </time>
           ) : (
@@ -156,7 +161,7 @@ function ReadingNote() {
         Step outside your usual reading. A different field can offer a whole new
         perspective.
       </p>
-      <div className="note-bottom">Four topics. More possibilities.</div>
+      <div className="note-bottom">More fields. More possibilities.</div>
     </aside>
   )
 }
@@ -165,6 +170,7 @@ function Home() {
   const session = useSession()
   const [params] = useSearchParams()
   const topic = params.get('topic') || ''
+  const sort = params.get('sort') || ''
   const query = (params.get('q') || '').trim()
   const { page, size, update } = useReadingPages()
   const topics = useQuery({
@@ -176,19 +182,21 @@ function Home() {
       'articles',
       session.data?.user?.id ?? null,
       topic,
+      sort,
       page,
       size,
       query,
     ],
     queryFn: ({ signal }) =>
       get<ArticlePage>(
-        `articles/?topic=${encodeURIComponent(topic)}&page=${page}&page_size=${size}&q=${encodeURIComponent(query)}`,
+        `articles/?topic=${encodeURIComponent(topic)}&sort=${encodeURIComponent(sort)}&page=${page}&page_size=${size}&q=${encodeURIComponent(query)}`,
         signal,
       ),
   })
   const items = articles.data?.results || []
   const currentPage = articles.data?.page ?? page
-  const lead = !topic && !query && currentPage === 1 ? items[0] : undefined
+  const lead =
+    !topic && !query && !sort && currentPage === 1 ? items[0] : undefined
   const rest = items.filter((item) => item.id !== lead?.id)
   return (
     <>
@@ -204,9 +212,8 @@ function Home() {
         </div>
         <p>
           A little perspective for your everyday.
-          <br /> Explore ideas across technology, the economy,
-          <br className="desktop-break" /> finance and music. Follow your
-          curiosity.
+          <br /> Follow AI, open source, science and the wider world.
+          <br className="desktop-break" /> Find a story. Follow its source.
         </p>
       </section>
       <SearchStories
@@ -216,6 +223,10 @@ function Home() {
       />
       <div className="reading-desk">
         <aside className="reading-tools">
+          <DiscoveryOrder
+            value={sort}
+            onChange={(value) => update({ sort: value, page: '' })}
+          />
           <nav className="topics" aria-label="Filter by topic">
             <button
               aria-pressed={!topic}
@@ -253,6 +264,17 @@ function Home() {
           <ReadingNote />
         </aside>
         <div className="reading-stream">
+          {(sort || ['agents-skills', 'open-source'].includes(topic)) && (
+            <details className="discovery-scope">
+              <summary>About project coverage and growth</summary>
+              <p>
+                A sample of recently active GitHub projects with identified
+                licenses. Total stars measure accumulated interest. Growth
+                compares actual observations 24–26 hours apart; new or outdated
+                observations are excluded from growth ordering.
+              </p>
+            </details>
+          )}
           {articles.isPending ? (
             <div className="notice" role="status">
               Gathering your reading…
@@ -261,12 +283,28 @@ function Home() {
             <Notice retry={() => void articles.refetch()} />
           ) : items.length === 0 ? (
             <div className="notice">
-              <h2>{query ? 'No matching stories.' : 'A fresh page.'}</h2>
+              <h2>
+                {sort === 'growth'
+                  ? 'No comparable growth observations yet.'
+                  : query
+                    ? 'No matching stories.'
+                    : 'A fresh page.'}
+              </h2>
               <p>
-                {query
-                  ? 'Try different keywords, clear the search, or choose another topic.'
-                  : 'There are no stories in this view yet. Try another topic or come back later.'}
+                {sort === 'growth'
+                  ? 'Growth needs at least a day of successful observations. Try another topic or browse total stars while history builds.'
+                  : query
+                    ? 'Try different keywords, clear the search, or choose another topic.'
+                    : 'There are no stories in this view yet. Try another topic or come back later.'}
               </p>
+              {sort === 'growth' && (
+                <button
+                  className="button"
+                  onClick={() => update({ sort: 'stars', page: '' })}
+                >
+                  Browse total stars
+                </button>
+              )}
             </div>
           ) : (
             <div aria-busy={articles.isFetching}>
@@ -284,15 +322,21 @@ function Home() {
                     <h2>
                       {query
                         ? 'Search results'
-                        : topic
-                          ? topics.data?.find((item) => item.slug === topic)
-                              ?.name || 'Stories'
-                          : 'Across your world'}
+                        : sort
+                          ? sort === 'growth'
+                            ? 'Observed star growth'
+                            : 'Projects by total stars'
+                          : topic
+                            ? topics.data?.find((item) => item.slug === topic)
+                                ?.name || 'Stories'
+                            : 'Across your world'}
                     </h2>
                     <span>
                       {query
-                        ? `${articles.data?.count ?? 0} matching ${articles.data?.count === 1 ? 'story' : 'stories'}`
-                        : `${rest.length} ${rest.length === 1 ? 'story' : 'stories'} to explore`}
+                        ? `${articles.data?.count ?? 0} matching ${sort ? (articles.data?.count === 1 ? 'project' : 'projects') : articles.data?.count === 1 ? 'story' : 'stories'}`
+                        : sort
+                          ? `${articles.data?.count ?? 0} projects`
+                          : `${rest.length} ${rest.length === 1 ? 'story' : 'stories'} to explore`}
                     </span>
                   </div>
                   {rest.map((article) => (
@@ -346,7 +390,7 @@ function Detail() {
       <Metadata article={item} />
       <dl className="story-dates">
         <div>
-          <dt>Published</dt>
+          <dt>{item.repository ? 'Repository created' : 'Published'}</dt>
           <dd>
             {item.published_at ? (
               <time dateTime={item.published_at}>
@@ -359,7 +403,9 @@ function Detail() {
         </div>
         {item.source_updated_at && (
           <div>
-            <dt>Updated by source</dt>
+            <dt>
+              {item.repository ? 'Last pushed on GitHub' : 'Updated by source'}
+            </dt>
             <dd>
               <time dateTime={item.source_updated_at}>
                 {timestampLabel(item.source_updated_at)}
@@ -377,13 +423,26 @@ function Detail() {
         </div>
       </dl>
       <div className="summary-label">
-        {item.is_sample ? 'ORIGINAL DEMO COPY' : 'SOURCE FEED EXCERPT'}
+        {item.is_sample
+          ? 'ORIGINAL DEMO COPY'
+          : item.repository
+            ? 'REPOSITORY DESCRIPTION & TOPICS'
+            : 'SOURCE FEED EXCERPT'}
       </div>
       <p className="detail-summary">
         {item.summary ||
           'No summary was provided by the source. Read the original article for the full story.'}
       </p>
-      {!item.is_sample && (
+      <RepositoryStats article={item} detailed />
+      {item.repository && (
+        <p className="source-note">
+          Public repository metadata from GitHub. Star counts reflect interest,
+          not a security or quality review. Growth is a net change within this
+          observed sample, not a global trending rank. No repository code is
+          downloaded or executed.
+        </p>
+      )}
+      {!item.is_sample && !item.repository && (
         <p className="source-note">
           A short excerpt supplied by the source feed, not an AI summary.
           Published dates are shown in UTC; they are never replaced by
@@ -408,7 +467,9 @@ function Detail() {
           >
             {item.is_sample
               ? 'Visit reference resource'
-              : 'Read original article'}{' '}
+              : item.repository
+                ? 'Open repository'
+                : 'Read original article'}{' '}
             <span aria-hidden="true">↗</span>
             <span className="sr-only"> (opens in a new tab)</span>
           </a>
@@ -530,8 +591,8 @@ export default function App() {
         Skip to content
       </a>
       <div className="demo-banner">
-        <span className="demo-pill">WORLDLINE</span> Stories from official
-        feeds. Follow the source. Keep your perspective.
+        <span className="demo-pill">WORLDLINE</span> Stories and projects from
+        reviewed sources. Follow the source. Keep your perspective.
       </div>
       <div className="shell">
         <header className="header">

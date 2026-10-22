@@ -95,3 +95,73 @@
     margin: 0 0 20px;
   }
 }
+
+.discovery-order {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 20px;
+}
+.discovery-order label {
+  font-size: 14px;
+  color: var(--muted);
+}
+.discovery-order select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.discovery-scope {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 0 0 24px;
+  max-width: 70ch;
+}
+.repository-stats {
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 20px 0;
+  font-variant-numeric: tabular-nums;
+}
+.repository-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+}
+.repository-observed {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+}
+.lead-card .repository-stats {
+  color: inherit;
+}
+@media (max-width: 800px) {
+  .discovery-order {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 12px;
+  }
+  .discovery-order select {
+    flex: 1;
+  }
+}
+
+.discovery-scope summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: list-item;
+  padding: 10px 0;
+}
+.discovery-scope p {
+  margin: 8px 0 0;
+}

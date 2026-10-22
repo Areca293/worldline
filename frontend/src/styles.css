@@ -1122,3 +1122,19 @@ footer > span {
     transform: none;
   }
 }
+
+/* Ten topics stay within their own scroll row on phone/tablet. */
+@media (max-width: 800px) {
+  .topics {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .topics button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .topics .edition {
+    display: none;
+  }
+}

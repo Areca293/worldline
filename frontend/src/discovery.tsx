@@ -32,7 +32,7 @@ export function SearchStories({
           value={draft}
           maxLength={200}
           aria-describedby="search-scope"
-          placeholder="Enter keywords"
+          placeholder="e.g. Claude, skills, Mistral"
           onChange={(event) => setDraft(event.target.value)}
         />
         <button className="button" type="submit">
@@ -54,7 +54,7 @@ export function SearchStories({
       <p id="search-scope">
         {saved
           ? 'Search titles and excerpts in your collection.'
-          : 'Search titles and excerpts already collected from our sources.'}
+          : 'Search collected titles, descriptions and publisher names.'}
       </p>
       {query.length > 200 && <p role="alert">Use at most 200 characters.</p>}
     </form>
@@ -77,7 +77,7 @@ export function SourceUpdates() {
   return (
     <details className="source-updates">
       <summary>Source updates</summary>
-      <p>Feed checks, separate from publication dates.</p>
+      <p>Source checks, separate from publication dates.</p>
       {sources.isPending ? (
         <p role="status">Checking source updates…</p>
       ) : sources.isError ? (

@@ -1,10 +1,11 @@
 # Worldline
 
-A mobile-first English reading home for technology, economy, finance and music.
+A mobile-first English reading home for news, AI and open-source discovery across ten topics.
 Worldline is a replaceable working name.
 
-**M2 local development and deployment preparation:** official RSS imports, scheduled
-updates/retries, source status, keyword search, registration and private bookmarks.
+**M2 local development and deployment preparation, plus expanded content coverage:**
+14 official RSS feeds and two GitHub repository collections, observed star growth,
+scheduled updates/retries, source status, keyword search, registration and private bookmarks.
 Production containers and CI are included. Public HTTPS deployment and physical
 iPhone Safari acceptance await a server/domain; AI and iOS packaging remain later work.
 
@@ -12,7 +13,7 @@ iPhone Safari acceptance await a server/domain; AI and iOS packaging remain late
 
 ```text
 Browser → React / TypeScript / Vite → /api/ → Django REST Framework → PostgreSQL
-Celery Beat → Redis → Celery workers → reviewed RSS endpoints → PostgreSQL
+Celery Beat → Redis → Celery workers → reviewed RSS / GitHub API endpoints → PostgreSQL
 Manual import command → the same audited import path
 ```
 
@@ -25,9 +26,10 @@ use `compose.production.yaml` for Caddy HTTPS, Gunicorn, workers and private dat
 frontend/src/App.tsx          Reading pages and topic navigation
 frontend/src/account.tsx      Registration, sign-in and bookmark controls
 frontend/src/api.ts           Typed API calls and CSRF-protected writes
-backend/news/models.py       Source, Topic, Article and Bookmark
+backend/news/models.py       Reading data, repositories and star observations
 backend/news/feeds.py        Bounded download, parse and idempotent import
 backend/news/catalog.py      Reviewed source allowlist and usage notes
+backend/news/repositories.py Validated GitHub metadata and measured star change
 backend/news/ingestion.py    Audited attempts and per-source overlap protection
 backend/news/tasks.py        Hourly dispatch and bounded retries
 backend/news/search.py       PostgreSQL keyword search and ranking
@@ -117,14 +119,16 @@ cache; the production settings use shared Redis behind a single trusted Caddy pr
 
 ## Reading controls
 
-**Search stories** searches stored titles and source excerpts using English keyword
-matching (including word stems), with titles ranked above excerpts. All significant
-words must match. It does not search the web or unavailable full articles. Searches
+**Search stories** searches stored titles and descriptions using English keyword
+matching (including word stems), with titles ranked above descriptions. All significant
+words must match those fields; a source name or repository name containing the search
+text also matches. Try `OpenAI`, `Mistral`, or `skills`. It does not search the web,
+unavailable full articles, or answer natural-language questions with AI. Searches
 accept up to 200 characters, combine with topics and pagination, and persist in the
 URL. **Search saved stories** only searches the signed-in reader's collection.
 Clear search restores browsing. Offline and failed requests have retry guidance.
 
-Article titles open the in-app detail. The diagonal arrow opens the original article
+Article and repository titles open the in-app detail. The diagonal arrow opens the source
 in a new tab. The star at the lower right, aligned with the publication date, saves
 or removes a bookmark; unsigned readers are directed to sign in.
 
@@ -139,16 +143,35 @@ or `all`). Responses include `count`, `results`, `next`, `previous`, `page`, `pa
 including when removing bookmarks shrinks a collection. All still respects the topic
 filter and the current user's bookmark permissions.
 
+**Explore** switches between stories/projects, projects ordered by total stars, and
+projects ordered by observed star growth. Combine it with **Agents & Skills** or
+**Open Source**, a keyword and pagination; the URL retains the selection. Article
+queries accept `sort=stars` or `sort=growth`. Repository details show the reported
+license, creation/push dates, observation time and comparison baseline when available.
+
 ## Sources and dates
 
-Initial feeds are NASA, BEA, Federal Reserve and Library of Congress music blog.
-See [source scope and usage notes](docs/CONTENT_SOURCES.md). Only feed excerpts are
-stored; no article-body scraping, photos, audio or AI-generated summaries.
+Ten topics: Technology, Economy, Finance, Music, AI Companies, AI Models,
+Agents & Skills, Open Source, Science and Security. The original NASA, BEA, Federal
+Reserve and Library of Congress feeds remain. New sources include OpenAI, Google AI,
+DeepMind, Hugging Face, Mistral, Microsoft Research, MIT, ESA, NVIDIA Developer,
+Cloudflare and two GitHub API collections. See [source scope and usage notes](docs/CONTENT_SOURCES.md).
+Only short feed excerpts or repository metadata are stored; no article-body scraping,
+photos, audio, repository code or AI-generated summaries.
+
+GitHub collections sample up to 30 candidates each per hourly import, filtered for
+recent activity and identified licenses. They are not a complete GitHub index or
+global trending ranking. Total stars measure accumulated interest. Growth compares
+actual observations 24–26 hours apart; a new project has no growth metric until that
+history exists. Observations older than two hours are excluded from growth ordering.
+The page distinguishes missing, zero, negative and stale growth. Projects outside
+later samples remain readable with their last observation. Company feeds report
+attributed announcements, not predictions of unannounced model release dates.
 
 The all-topic view alternates across topics, ordering by source publication date
 within each topic. Topic views show their newest published items first. Unknown
 dates remain unknown, and older music posts keep their dates. This is a small
-selection of official institutional sources, not comprehensive news coverage.
+selection of institutional/company sources and repository metadata, not comprehensive news coverage.
 
 Django admin maintains sources and articles. A new feed URL must first be added
 to the reviewed allowlist in `backend/news/catalog.py`. Existing demo articles are
@@ -171,7 +194,8 @@ The PostgreSQL development user must have permission to create test databases.
 Compose's initial user has it. Pytest creates and destroys a separate test database;
 it does not run tests against normal reading data. Default tests cover RSS/Atom
 provenance, duplicate imports, invalid feeds, safe network targets, CSRF, session
-login, persistence and cross-user bookmark isolation.
+login, persistence and cross-user bookmark isolation. GitHub tests cover validation,
+renames, repeat imports, real observation windows, stale data and combined search/sorting.
 
 From `frontend`:
 

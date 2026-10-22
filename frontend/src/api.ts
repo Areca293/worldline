@@ -16,6 +16,16 @@ export interface Article {
   collected_at: string
   is_sample: boolean
   featured: boolean
+  repository?: {
+    full_name: string
+    stars: number
+    license: string
+    observed_at: string
+    pushed_at: string | null
+    baseline_at: string | null
+    star_change: number | null
+    is_stale: boolean
+  } | null
 }
 export interface ArticlePage {
   page: number

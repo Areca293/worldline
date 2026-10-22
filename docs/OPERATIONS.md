@@ -43,6 +43,24 @@ In admin, inspect Sources and Feed runs. Error records contain safe categories,
 not response bodies. If PostgreSQL is unavailable, the attempt cannot be persisted;
 consult worker logs. Disabling a source prevents new queued attempts from fetching it.
 
+## Repository observations
+
+After upgrading, run migrations and `seed_sources` before rebuilding the scheduler.
+The catalog has 14 RSS feeds and two GitHub API collections. The GitHub collections
+share the existing source locks, audited imports and retry handling; normal operation
+adds two unauthenticated search requests per hour, plus bounded retries. Incomplete
+API results are failures, not successful empty updates. Do not add arbitrary API URLs.
+
+Each sampled repository retains one observation per hour. Successful repository
+imports remove observations older than eight days, while retaining articles and
+bookmarks. Growth requires a real baseline 24–26 hours older than the latest
+observation; the first day cannot show measured growth. A sleeping laptop, an API
+failure or a repository leaving the limited candidate sample can interrupt tracking.
+Observations over two hours old are marked stale and excluded from growth ordering.
+The worker must keep running for history to accumulate; restarting it does not reset
+stored observations. Repository metadata and observations are included in PostgreSQL
+backups. No GitHub token is required by the current collectors.
+
 ## Production preparation
 
 Use one Linux server with Docker Engine/Compose, persistent disk, a DNS hostname
