@@ -18,7 +18,11 @@ def search_articles(queryset, text):
     query = SearchQuery(text, config="english", search_type="plain")
     return (
         queryset.annotate(search_document=article_vector())
-        .filter(Q(search_document=query) | Q(source__name__icontains=text))
+        .filter(
+            Q(search_document=query)
+            | Q(source__name__icontains=text)
+            | Q(repository__full_name__icontains=text)
+        )
         .annotate(search_rank=SearchRank(article_vector(), query))
         .order_by("-search_rank", F("published_at").desc(nulls_last=True), "-id")
     )

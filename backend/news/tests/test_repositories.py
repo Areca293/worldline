@@ -122,6 +122,7 @@ def test_repository_sort_search_and_stale_growth(source):
     assert response["count"] == 1 and response["results"][0]["repository"]["star_change"] == 30
     assert client.get("/api/articles/?sort=growth&topic=music").json()["count"] == 0
     assert client.get("/api/articles/?q=GitHub").json()["count"] == 1
+    assert client.get("/api/articles/?q=test/agent").json()["count"] == 1
     repo.observed_at = timezone.now() - timedelta(hours=3)
     repo.save()
     assert client.get("/api/articles/?sort=growth").json()["count"] == 0
