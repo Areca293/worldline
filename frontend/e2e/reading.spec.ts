@@ -194,3 +194,151 @@ test('changes page numbers and sizes, preserves them on reload, and shows all st
   ).toHaveValue('all')
   await expect(page.locator('article')).toHaveCount(25)
 })
+
+test('keeps the reading desk usable at wide, tablet and narrow widths', async ({
+  page,
+}, testInfo) => {
+  const widths = testInfo.project.name === 'desktop' ? [1440, 768] : [390, 320]
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/')
+    await expect(
+      page.getByRole('heading', { name: 'Browser test story', exact: true }),
+    ).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    expect(
+      await page.evaluate(
+        () =>
+          document.fonts.check('16px "Archivo Variable"') &&
+          document.fonts.check('16px "Literata Variable"'),
+      ),
+    ).toBe(true)
+    const unclipped = async () => {
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true)
+      expect(
+        await page
+          .locator('h1, h2, h3')
+          .evaluateAll((headings) =>
+            headings.every(
+              (heading) => heading.scrollWidth <= heading.clientWidth + 1,
+            ),
+          ),
+      ).toBe(true)
+    }
+    await unclipped()
+    await page.screenshot({
+      path: testInfo.outputPath(`home-${width}.png`),
+      fullPage: false,
+    })
+    await page
+      .getByRole('link', { name: 'Browser test story', exact: true })
+      .click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'Browser test story',
+    )
+    await expect(
+      page.getByText(
+        'An original fixture used only in the disposable browser-test database.',
+        { exact: true },
+      ),
+    ).toBeVisible()
+    await unclipped()
+    await page.screenshot({
+      path: testInfo.outputPath(`detail-${width}.png`),
+      fullPage: true,
+    })
+    await page.getByRole('link', { name: 'Register', exact: true }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'Create your account.',
+    )
+    await page.getByLabel('Email', { exact: true }).focus()
+    expect(
+      await page
+        .getByLabel('Email', { exact: true })
+        .evaluate((element) => getComputedStyle(element).outlineStyle),
+    ).toBe('solid')
+    await unclipped()
+    await page.screenshot({
+      path: testInfo.outputPath(`register-${width}.png`),
+      fullPage: true,
+    })
+    await page
+      .getByRole('link', { name: 'Sign in', exact: true })
+      .first()
+      .click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'Welcome back.',
+    )
+    await unclipped()
+    await page.screenshot({
+      path: testInfo.outputPath(`login-${width}.png`),
+      fullPage: true,
+    })
+    await page.getByRole('link', { name: 'Saved stories', exact: true }).click()
+    await expect(
+      page.getByText('Sign in to see your saved stories.'),
+    ).toBeVisible()
+    await unclipped()
+  }
+})
+
+test('supports keyboard entry, missing routes and reduced motion without hiding content', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  await page.keyboard.press('Tab')
+  await expect(
+    page.getByRole('link', { name: 'Skip to content' }),
+  ).toBeFocused()
+  await expect(page.locator('.skip-link')).toHaveCSS('opacity', '1')
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/#main/)
+  await expect(
+    page.getByRole('heading', { name: 'Browser test story', exact: true }),
+  ).toBeVisible()
+  expect(
+    await page
+      .locator('.row-arrow span')
+      .first()
+      .evaluate((element) => getComputedStyle(element).transitionDuration),
+  ).toBe('0s')
+  await page.goto('/register')
+  await page
+    .getByLabel('Username', { exact: true })
+    .fill('weak-password-reader')
+  await page.getByLabel('Email', { exact: true }).fill('reader@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('12345678')
+  await page.getByLabel('Confirm password', { exact: true }).fill('12345678')
+  await page
+    .getByRole('button', { name: 'Create account', exact: true })
+    .click()
+  await expect(page.getByRole('alert')).toContainText('password')
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  )
+  await expect(page.locator('.skip-link')).not.toBeFocused()
+  await expect(page.locator('.skip-link')).toHaveCSS('opacity', '0')
+  await page.screenshot({
+    path: testInfo.outputPath('registration-errors.png'),
+    fullPage: true,
+  })
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true)
+  await page.goto('/missing-reading-page')
+  await expect(
+    page.getByRole('heading', { name: 'This page is off the map.' }),
+  ).toBeVisible()
+  await page.getByRole('link', { name: 'Return home →' }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Browser test story', exact: true }),
+  ).toBeVisible()
+})

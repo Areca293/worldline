@@ -92,14 +92,17 @@ em {
 .skip-link {
   position: fixed;
   z-index: 20;
-  top: -100px;
+  top: 16px;
   left: 16px;
+  opacity: 0;
+  pointer-events: none;
   background: var(--ink);
   color: white;
   padding: 14px 20px;
 }
 .skip-link:focus {
-  top: 16px;
+  opacity: 1;
+  pointer-events: auto;
 }
 .shell {
   max-width: 1440px;

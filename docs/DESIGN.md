@@ -88,3 +88,28 @@ Read real long titles in the homepage and detail, check all existing browser flo
 inspect desktop/tablet/phone and a 320px viewport, and compare the copy against the
 previous commit. Do not change database data, add sample news, replace functional
 controls, create a new design framework or publish.
+
+## Final critique and verification
+
+The source headline now supplies the focal point. The desktop index gives topic and
+quantity controls a stable place without turning every article into a boxed card.
+Archivo separates navigation and titles from Literata's source excerpts. Both fonts
+are bundled locally; their OFL licenses are in `frontend/public/font-licenses.txt`.
+
+The first phone review showed too much introductory space. Header and introduction
+spacing were tightened while retaining the copy; the reading note moves below the
+stream. The retained introduction still takes space on small screens, a deliberate
+tradeoff under the copy-preservation requirement. Long headlines wrap instead of
+being shortened. Decorative orbit artwork, duplicate wordmark ornament and row
+numbers were removed; source wording, dates and route behavior were retained.
+
+Automated checks passed at 1440, 768, 390 and 320px: no page overflow or clipped
+headings, local font loading, readable forms and visible focus. Keyboard entry,
+reduced motion, missing routes and weak-password errors also passed. Screenshot
+review caught a mobile full-page rendering issue with an offscreen skip link; it
+now remains transparent until focused, with assertions for both states. The final
+browser suite passed all 10 desktop/mobile scenarios, including registration,
+sign-in, private bookmark persistence and isolation, original links and pagination.
+Frontend unit tests passed (6), and the production build passed. Real feed pages
+were inspected separately from the disposable-database fixtures. Physical iPhone
+testing and public deployment remain outside this acceptance.
