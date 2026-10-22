@@ -10,9 +10,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Article, Bookmark, Topic
+from .models import Article, Bookmark, Source, Topic
 from .pagination import ReadingPagination
-from .serializers import ArticleSerializer, TopicSerializer
+from .search import search_articles
+from .serializers import ArticleSerializer, SourceStatusSerializer, TopicSerializer
 
 
 @api_view(["GET"])
@@ -23,7 +24,7 @@ def health(request):
             cursor.fetchone()
     except DatabaseError:
         return Response({"status": "unavailable", "database": "unavailable"}, status=503)
-    return Response({"status": "ok", "database": "connected", "stage": "M1"})
+    return Response({"status": "ok", "database": "connected", "stage": "M2"})
 
 
 class DatabaseErrorMixin:
@@ -52,6 +53,13 @@ class TopicList(DatabaseErrorMixin, generics.ListAPIView):
 
 
 @method_decorator(never_cache, name="dispatch")
+class SourceStatusList(DatabaseErrorMixin, generics.ListAPIView):
+    queryset = Source.objects.filter(is_active=True).order_by("pk")
+    serializer_class = SourceStatusSerializer
+    pagination_class = None
+
+
+@method_decorator(never_cache, name="dispatch")
 class ArticleList(DatabaseErrorMixin, generics.ListAPIView):
     pagination_class = ReadingPagination
     serializer_class = ArticleSerializer
@@ -62,7 +70,12 @@ class ArticleList(DatabaseErrorMixin, generics.ListAPIView):
         )
         topic = self.request.query_params.get("topic")
         if topic:
-            return articles.filter(topic__slug=topic)
+            articles = articles.filter(topic__slug=topic)
+        query = self.request.query_params.get("q", "").strip()
+        if query:
+            return search_articles(articles, query)
+        if topic:
+            return articles
         # Round-robin across topics, newest published story within each topic first.
         # No click tracking or collection timestamp masquerading as publication time.
         return articles.annotate(
@@ -90,11 +103,12 @@ class BookmarkList(DatabaseErrorMixin, generics.ListAPIView):
     serializer_class = ArticleSerializer
 
     def get_queryset(self):
-        return (
+        articles = (
             articles_for(self.request.user)
             .filter(bookmarks__user=self.request.user)
             .order_by("-bookmarks__created_at", "-bookmarks__id")
         )
+        return search_articles(articles, self.request.query_params.get("q", ""))
 
 
 @method_decorator(never_cache, name="dispatch")

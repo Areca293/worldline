@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { OfflineNotice, SearchStories, SourceUpdates } from './discovery'
 import { PageLinks, PageSize, useReadingPages } from './pagination'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -164,22 +165,30 @@ function Home() {
   const session = useSession()
   const [params] = useSearchParams()
   const topic = params.get('topic') || ''
+  const query = (params.get('q') || '').trim()
   const { page, size, update } = useReadingPages()
   const topics = useQuery({
     queryKey: ['topics'],
     queryFn: ({ signal }) => get<Topic[]>('topics/', signal),
   })
   const articles = useQuery({
-    queryKey: ['articles', session.data?.user?.id ?? null, topic, page, size],
+    queryKey: [
+      'articles',
+      session.data?.user?.id ?? null,
+      topic,
+      page,
+      size,
+      query,
+    ],
     queryFn: ({ signal }) =>
       get<ArticlePage>(
-        `articles/?topic=${encodeURIComponent(topic)}&page=${page}&page_size=${size}`,
+        `articles/?topic=${encodeURIComponent(topic)}&page=${page}&page_size=${size}&q=${encodeURIComponent(query)}`,
         signal,
       ),
   })
   const items = articles.data?.results || []
   const currentPage = articles.data?.page ?? page
-  const lead = !topic && currentPage === 1 ? items[0] : undefined
+  const lead = !topic && !query && currentPage === 1 ? items[0] : undefined
   const rest = items.filter((item) => item.id !== lead?.id)
   return (
     <>
@@ -200,6 +209,11 @@ function Home() {
           curiosity.
         </p>
       </section>
+      <SearchStories
+        key={query}
+        query={query}
+        onSearch={(q) => update({ q, page: '' })}
+      />
       <div className="reading-desk">
         <aside className="reading-tools">
           <nav className="topics" aria-label="Filter by topic">
@@ -227,6 +241,7 @@ function Home() {
             size={size}
             onChange={(value) => update({ page_size: value, page: '' })}
           />
+          <SourceUpdates />
           {topics.isError && (
             <p role="status" className="filter-error">
               Topics are unavailable.{' '}
@@ -246,10 +261,11 @@ function Home() {
             <Notice retry={() => void articles.refetch()} />
           ) : items.length === 0 ? (
             <div className="notice">
-              <h2>A fresh page.</h2>
+              <h2>{query ? 'No matching stories.' : 'A fresh page.'}</h2>
               <p>
-                There are no stories in this view yet. Try another topic or come
-                back later.
+                {query
+                  ? 'Try different keywords, clear the search, or choose another topic.'
+                  : 'There are no stories in this view yet. Try another topic or come back later.'}
               </p>
             </div>
           ) : (
@@ -266,14 +282,17 @@ function Home() {
                 <section className="stories">
                   <div className="section-title">
                     <h2>
-                      {topic
-                        ? topics.data?.find((item) => item.slug === topic)
-                            ?.name || 'Stories'
-                        : 'Across your world'}
+                      {query
+                        ? 'Search results'
+                        : topic
+                          ? topics.data?.find((item) => item.slug === topic)
+                              ?.name || 'Stories'
+                          : 'Across your world'}
                     </h2>
                     <span>
-                      {rest.length} {rest.length === 1 ? 'story' : 'stories'} to
-                      explore
+                      {query
+                        ? `${articles.data?.count ?? 0} matching ${articles.data?.count === 1 ? 'story' : 'stories'}`
+                        : `${rest.length} ${rest.length === 1 ? 'story' : 'stories'} to explore`}
                     </span>
                   </div>
                   {rest.map((article) => (
@@ -401,11 +420,16 @@ function Detail() {
 
 function SavedStories() {
   const session = useSession()
+  const [params] = useSearchParams()
+  const query = (params.get('q') || '').trim()
   const { page, size, update } = useReadingPages()
   const saved = useQuery({
-    queryKey: ['bookmarks', session.data?.user?.id, page, size],
+    queryKey: ['bookmarks', session.data?.user?.id, page, size, query],
     queryFn: ({ signal }) =>
-      get<ArticlePage>(`bookmarks/?page=${page}&page_size=${size}`, signal),
+      get<ArticlePage>(
+        `bookmarks/?page=${page}&page_size=${size}&q=${encodeURIComponent(query)}`,
+        signal,
+      ),
     enabled: !!session.data?.user,
   })
   if (session.isPending)
@@ -430,6 +454,12 @@ function SavedStories() {
       <div className="eyebrow">YOUR PERSONAL COLLECTION</div>
       <h1>Worth coming back to.</h1>
       <p>Stories you’ve saved, ready when you are.</p>
+      <SearchStories
+        key={query}
+        query={query}
+        saved
+        onSearch={(q) => update({ q, page: '' })}
+      />
       <PageSize
         key={size}
         size={size}
@@ -448,8 +478,14 @@ function SavedStories() {
         </div>
       ) : saved.data.results.length === 0 ? (
         <div className="notice">
-          <h2>No saved stories yet.</h2>
-          <p>Select the star on any article to keep it here.</p>
+          <h2>
+            {query ? 'No matching saved stories.' : 'No saved stories yet.'}
+          </h2>
+          <p>
+            {query
+              ? 'Try different keywords or clear the search.'
+              : 'Select the star on any article to keep it here.'}
+          </p>
           <Link className="text-link" to="/">
             Explore stories →
           </Link>
@@ -507,6 +543,7 @@ export default function App() {
           </div>
         </header>
         <main id="main">
+          <OfflineNotice />
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/articles/:slug" element={<Detail />} />

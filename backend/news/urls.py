@@ -5,6 +5,7 @@ from . import auth, views
 urlpatterns = [
     path("health/", views.health),
     path("topics/", views.TopicList.as_view()),
+    path("sources/", views.SourceStatusList.as_view()),
     path("articles/", views.ArticleList.as_view()),
     path("articles/<slug:slug>/", views.ArticleDetail.as_view()),
     path("articles/<slug:slug>/bookmark/", views.BookmarkDetail.as_view()),

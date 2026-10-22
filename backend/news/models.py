@@ -1,11 +1,13 @@
 import uuid
 
 from django.conf import settings
+from django.contrib.postgres.indexes import GinIndex
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 from .catalog import APPROVED_FEED_URLS
+from .search import article_vector
 
 
 class Topic(models.Model):
@@ -72,7 +74,10 @@ class Article(models.Model):
                 name="unique_source_entry",
             )
         ]
-        indexes = [models.Index(fields=["topic", "-published_at"], name="article_topic_published")]
+        indexes = [
+            models.Index(fields=["topic", "-published_at"], name="article_topic_published"),
+            GinIndex(article_vector(), name="article_search_document"),
+        ]
 
     def __str__(self):
         return self.title

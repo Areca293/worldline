@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Article, Source, Topic
@@ -13,6 +16,23 @@ class SourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Source
         fields = ["name", "website_url"]
+
+
+class SourceStatusSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+
+    def get_status(self, source):
+        if source.last_error:
+            return "failed"
+        if source.last_success_at is None:
+            return "pending"
+        if source.last_success_at < timezone.now() - timedelta(hours=2):
+            return "stale"
+        return "ok"
+
+    class Meta:
+        model = Source
+        fields = ["id", "name", "website_url", "last_attempt_at", "last_success_at", "status"]
 
 
 class ArticleSerializer(serializers.ModelSerializer):

@@ -37,7 +37,7 @@ it('shows an empty state instead of inserting fake stories', async () => {
           ? { user: null, csrfToken: 'token' }
           : url.includes('health')
             ? { database: 'connected' }
-            : url.includes('topics')
+            : url.includes('topics') || url.includes('sources')
               ? []
               : { results: [], count: 0, next: null },
     })),
@@ -99,6 +99,7 @@ function accountServer(initiallySignedIn = false) {
         data = { is_bookmarked: bookmarked }
       } else if (url.includes('health')) data = { database: 'connected' }
       else if (url.includes('topics')) data = [story.topic]
+      else if (url.includes('sources')) data = []
       else if (url.includes('bookmarks'))
         data = {
           results: bookmarked ? [{ ...story, is_bookmarked: true }] : [],

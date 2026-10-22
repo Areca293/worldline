@@ -28,7 +28,7 @@ def test_reading_in_real_browser(live_server, django_user_model, settings, tmp_p
         django_user_model.objects.create_user(username=name, password=password)
     topic = Topic.objects.create(name="Music", slug="music")
     source = Source.objects.create(
-        name="Browser test publisher", website_url="https://example.com/"
+        name="Browser test publisher", website_url="https://example.com/", is_active=True
     )
     Article.objects.create(
         title="Browser test story",

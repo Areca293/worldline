@@ -8,7 +8,10 @@ import '@fontsource-variable/literata/wght.css'
 import './styles.css'
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+  defaultOptions: {
+    queries: { staleTime: 30_000, retry: 1, networkMode: 'always' },
+    mutations: { networkMode: 'always' },
+  },
 })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
