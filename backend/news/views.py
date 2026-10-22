@@ -79,7 +79,6 @@ class ArticleList(DatabaseErrorMixin, generics.ListAPIView):
         if topic:
             articles = articles.filter(topic__slug=topic)
         query = self.request.query_params.get("q", "").strip()
-        articles = search_articles(articles, query)
         sort = self.request.query_params.get("sort", "")
         if sort not in {"", "stars", "growth"}:
             raise ValidationError({"sort": "Choose stars or growth, or leave sort empty."})
@@ -90,8 +89,11 @@ class ArticleList(DatabaseErrorMixin, generics.ListAPIView):
                     repository__observed_at__gte=timezone.now() - timedelta(hours=2),
                     repository__star_change__isnull=False,
                 )
+                articles, self.approximate_search = search_articles(articles, query)
                 return articles.order_by("-repository__star_change", "-repository__stars", "id")
+            articles, self.approximate_search = search_articles(articles, query)
             return articles.order_by("-repository__stars", "id")
+        articles, self.approximate_search = search_articles(articles, query)
         if query:
             return articles
         if topic:
@@ -128,7 +130,10 @@ class BookmarkList(DatabaseErrorMixin, generics.ListAPIView):
             .filter(bookmarks__user=self.request.user)
             .order_by("-bookmarks__created_at", "-bookmarks__id")
         )
-        return search_articles(articles, self.request.query_params.get("q", ""))
+        articles, self.approximate_search = search_articles(
+            articles, self.request.query_params.get("q", "")
+        )
+        return articles
 
 
 @method_decorator(never_cache, name="dispatch")

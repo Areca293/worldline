@@ -264,6 +264,11 @@ function Home() {
           <ReadingNote />
         </aside>
         <div className="reading-stream">
+          {articles.data?.approximate_search && articles.data.count > 0 && (
+            <p className="search-feedback" role="status">
+              No exact matches. Showing similar spellings for “{query}”.
+            </p>
+          )}
           {(sort || ['agents-skills', 'open-source'].includes(topic)) && (
             <details className="discovery-scope">
               <summary>About project coverage and growth</summary>
@@ -526,6 +531,12 @@ function SavedStories() {
         size={size}
         onChange={(value) => update({ page_size: value, page: '' })}
       />
+      {saved.data?.approximate_search && saved.data.count > 0 && (
+        <p className="search-feedback" role="status">
+          No exact matches. Showing similar spellings in your saved stories for
+          “{query}”.
+        </p>
+      )}
       {saved.isPending ? (
         <div role="status">Loading saved stories…</div>
       ) : saved.isError ? (

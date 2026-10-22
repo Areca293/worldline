@@ -88,3 +88,29 @@ def test_source_status_does_not_invent_success_or_leak_error_details(articles):
     with patch("news.views.SourceStatusList.get_queryset", side_effect=DatabaseError()):
         assert client.get("/api/sources/").status_code == 503
     assert client.get("/api/articles/").json()["count"] == 4
+
+
+def test_typo_fallback_is_ranked_scoped_and_keeps_exact_results(articles, django_user_model):
+    story = articles[0]
+    story.title = "ChatGPT releases new tools"
+    story.save()
+    articles[1].summary = "ChatGPT research updates"
+    articles[1].save()
+    client = APIClient()
+    typo = client.get("/api/articles/", {"q": "chatgpd", "page_size": 1}).json()
+    assert typo["approximate_search"] is True
+    assert typo["count"] == 2 and typo["total_pages"] == 2
+    assert client.get("/api/articles/", {"q": "chatgpd", "topic": "music"}).json()["count"] == 0
+    assert client.get("/api/articles/", {"q": "chatgpd releases"}).json()["count"] == 1
+    assert client.get("/api/articles/", {"q": "chatgpd nonexistent"}).json()["count"] == 0
+    assert client.get("/api/articles/", {"q": "xyz"}).json()["count"] == 0
+    exact = client.get("/api/articles/", {"q": "ChatGPT"}).json()
+    assert exact["count"] == 2 and exact["approximate_search"] is False
+    alice = django_user_model.objects.create_user(username="typo-alice")
+    bob = django_user_model.objects.create_user(username="typo-bob")
+    Bookmark.objects.create(user=alice, article=story)
+    Bookmark.objects.create(user=bob, article=articles[1])
+    client.force_authenticate(alice)
+    saved = client.get("/api/bookmarks/", {"q": "chatgpd"}).json()
+    assert saved["approximate_search"] is True
+    assert [a["id"] for a in saved["results"]] == [story.pk]

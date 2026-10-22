@@ -1,5 +1,15 @@
 # 实际进度
 
+## Modern Obsidian 与阅读体验优化（2026-10-22）
+
+- 分阶段计划与设计决策见 OBSIDIAN_PLAN.md；保留账号、收藏、内容与既有路由。
+- 阶段 1：PostgreSQL pg_trgm 拼写近似回退，仅在当前筛选范围没有正常匹配时启用；
+  4–40 字符英文词、最多八词，所有词均须匹配，页面标明 similar spellings。普通匹配
+  顺序不变，短查询不扩展，不自动修改 URL 或用户输入，不涉及 AI。
+- 阶段 1 验证：搜索与仓库测试 19 passed，前端 10 passed，构建通过；0006 迁移
+  已应用、Django check 通过。覆盖 chatgpd → ChatGPT、组合词、分类、分页和私人收藏。
+
+
 ## 内容覆盖扩展（2026-10-22）
 
 - 本轮按 `CONTENT_EXPANSION.md` 分为来源、GitHub 数据、界面与综合验收三阶段。

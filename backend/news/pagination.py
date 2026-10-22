@@ -17,6 +17,7 @@ class ReadingPagination(PageNumberPagination):
     def paginate_queryset(self, queryset, request, view=None):
         size = self.get_page_size(request)
         self.request = request
+        self.approximate_search = getattr(view, "approximate_search", False)
         paginator = self.django_paginator_class(
             queryset, max(1, queryset.count()) if self.show_all else size
         )
@@ -33,6 +34,7 @@ class ReadingPagination(PageNumberPagination):
         response = super().get_paginated_response(data)
         response.data.update(
             {
+                "approximate_search": self.approximate_search,
                 "page": self.page.number,
                 "page_size": None if self.show_all else self.page.paginator.per_page,
                 "total_pages": self.page.paginator.num_pages,

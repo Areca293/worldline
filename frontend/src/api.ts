@@ -28,6 +28,7 @@ export interface Article {
   } | null
 }
 export interface ArticlePage {
+  approximate_search?: boolean
   page: number
   page_size: number | null
   total_pages: number
