@@ -23,7 +23,7 @@ export function useAccountChange() {
   return async (session: Session) => {
     const privateData = {
       predicate: (query: { queryKey: readonly unknown[] }) =>
-        ['articles', 'article', 'bookmarks'].includes(
+        ['articles', 'article', 'bookmarks', 'assistance-status'].includes(
           String(query.queryKey[0]),
         ),
     }
@@ -57,6 +57,7 @@ export function AccountNav() {
   return (
     <div className="account-area">
       <nav className="account-nav" aria-label="Your account">
+        <Link to="/research">Web research</Link>
         <Link to="/bookmarks">Saved stories</Link>
         {session.isPending ? (
           <span>Checking account…</span>
@@ -188,7 +189,7 @@ export function Login() {
   const navigate = useNavigate()
   const candidate = params.get('next') || '/'
   const next =
-    /^\/(?:\?|$|bookmarks(?:\?|$)|articles\/[a-zA-Z0-9_-]+(?:\?|$))/.test(
+    /^\/(?:\?|$|research(?:\?|$)|bookmarks(?:\?|$)|articles\/[a-zA-Z0-9_-]+(?:\?|$))/.test(
       candidate,
     ) && !candidate.includes('\\')
       ? candidate
@@ -284,7 +285,7 @@ export function Register() {
       await changeAccount(data)
       const candidate = params.get('next') || '/'
       navigate(
-        /^\/(?:\?|$|bookmarks(?:\?|$)|articles\/[a-zA-Z0-9_-]+(?:\?|$))/.test(
+        /^\/(?:\?|$|research(?:\?|$)|bookmarks(?:\?|$)|articles\/[a-zA-Z0-9_-]+(?:\?|$))/.test(
           candidate,
         ) && !candidate.includes('\\')
           ? candidate

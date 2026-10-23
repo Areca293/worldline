@@ -24,6 +24,8 @@ def test_reading_in_real_browser(live_server, django_user_model, settings, tmp_p
     settings.ALLOWED_HOSTS = [*settings.ALLOWED_HOSTS, "127.0.0.1"]
     settings.SESSION_COOKIE_SECURE = False
     settings.CSRF_COOKIE_SECURE = False
+    # Browser acceptance must never spend real provider credits from a local .env.
+    settings.AI_ENABLED = False
     password = secrets.token_urlsafe(24)
     for name in ("browser-alice", "browser-bob"):
         django_user_model.objects.create_user(username=name, password=password)

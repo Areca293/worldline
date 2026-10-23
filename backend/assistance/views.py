@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from rest_framework import serializers
@@ -12,6 +13,7 @@ from news.views import DatabaseErrorMixin
 
 from . import services
 from .providers import AssistanceError
+from .quotes import quotation_for
 
 
 class AssistanceThrottle(UserRateThrottle):
@@ -69,3 +71,12 @@ class ReadingView(AssistanceView):
             Article.objects.select_related("source", "repository"), slug=slug
         )
         return Response(services.reading_help(request.user, article, data.validated_data["mode"]))
+
+
+@method_decorator(never_cache, name="dispatch")
+class DailyQuoteView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        return Response(quotation_for(timezone.now().date()))

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { DiscoveryOrder, RepositoryStats } from './repositories'
+import { DailyQuote, ReadingAssistance, Research } from './assistance'
 import { OfflineNotice, SearchStories, SourceUpdates } from './discovery'
 import { PageLinks, PageSize, useReadingPages } from './pagination'
 import { useQuery } from '@tanstack/react-query'
@@ -368,6 +369,7 @@ function Home() {
         </div>
       </div>
       <SourceUpdates />
+      <DailyQuote />
     </>
   )
 }
@@ -489,6 +491,7 @@ function Detail() {
           </a>
         )}
       </div>
+      <ReadingAssistance article={item} />
     </article>
   )
 }
@@ -626,6 +629,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/bookmarks" element={<SavedStories />} />
+            <Route path="/research" element={<Research />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
