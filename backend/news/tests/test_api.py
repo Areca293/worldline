@@ -33,7 +33,11 @@ def test_seed_repeat_and_filter_preserve_sample_provenance(client):
 @pytest.mark.django_db
 def test_empty_list_and_database_health(client):
     assert client.get("/api/articles/").data["results"] == []
-    assert client.get("/api/health/").data["database"] == "connected"
+    assert client.get("/api/health/").data == {
+        "status": "ok",
+        "database": "connected",
+        "stage": "M3",
+    }
 
 
 def test_health_failure_returns_503_without_database_details(client):

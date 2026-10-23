@@ -68,3 +68,11 @@ new marketing hero, charts, fake search results or ornamental animation. Existin
 
 Live evaluation remains pending: provider access, factual entailment, freshness,
 translation fidelity and invoice cost cannot be proven with mocked provider replies.
+
+## Delivery status — 2026-10-23
+
+All three local phases are complete. Backend integration: `6b1cf83`; interface and
+quotations: `01b5ef2`. Final verification and provider setup/acceptance instructions
+are recorded in [PROGRESS.md](PROGRESS.md) and [M3_OPERATIONS.md](M3_OPERATIONS.md).
+This completes the agreed no-key local scope; it does not complete live-provider
+quality/cost acceptance or authorize deployment.

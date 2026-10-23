@@ -3,11 +3,13 @@
 A mobile-first English reading home for news, AI and open-source discovery across ten topics.
 Worldline is a replaceable working name.
 
-**M2 local development and deployment preparation, plus expanded content coverage:**
+**M3 local implementation and provider integration preparation:**
 14 official RSS feeds and two GitHub repository collections, observed star growth,
 scheduled updates/retries, source status, keyword search, registration and private bookmarks.
-Production containers and CI are included. Public HTTPS deployment and physical
-iPhone Safari acceptance await a server/domain; AI and iOS packaging remain later work.
+Separate cited web research, excerpt summary/translation/simple English and attributed
+daily quotations are implemented. AI is disabled by default; real provider quality and
+cost acceptance await keys. Production containers and CI are included. Public HTTPS
+deployment, physical iPhone Safari acceptance and iOS packaging remain pending.
 
 ## Architecture
 
@@ -18,14 +20,16 @@ Manual import command → the same audited import path
 ```
 
 Vite proxies `/api/` to Django on port 8000, preserving the browser's Host for
-same-origin CSRF checks. All data access goes through Django. There are no paid
-services or external API keys. Production must also use a same-origin deployment;
+same-origin CSRF checks. All data access goes through Django. Core reading needs no paid
+services; optional assistance uses server-side Brave/OpenAI keys. Production must also use a same-origin deployment;
 use `compose.production.yaml` for Caddy HTTPS, Gunicorn, workers and private data services.
 
 ```text
 frontend/src/App.tsx          Reading pages and topic navigation
 frontend/src/account.tsx      Registration, sign-in and bookmark controls
 frontend/src/api.ts           Typed API calls and CSRF-protected writes
+frontend/src/assistance.tsx    Web research, excerpt help and daily quotations
+backend/assistance/           Bounded providers, evidence, private cache and quotas
 backend/news/models.py       Reading data, repositories and star observations
 backend/news/feeds.py        Bounded download, parse and idempotent import
 backend/news/catalog.py      Reviewed source allowlist and usage notes
@@ -170,6 +174,22 @@ projects ordered by observed star growth. Combine it with **Agents & Skills** or
 queries accept `sort=stars` or `sort=growth`. Repository details show the reported
 license, creation/push dates, observation time and comparison baseline when available.
 
+## Optional research and reading assistance
+
+**Web research** at `/research` is separate from collected-content search. When
+configured, it retrieves up to five Brave results and can generate an English answer
+with source links and actual retrieval time. Article details provide **Reading
+assistance** for a summary, Simplified Chinese translation or simpler English, based
+only on the saved source excerpt or repository description. Requests require sign-in,
+CSRF and explicit submission; there is no automatic AI work on page load.
+
+Without provider keys, the pages explicitly show unconfigured states and ordinary
+reading remains available. Attributed daily quotations work without keys. Caches,
+daily request quotas and safe usage metrics are included. A valid source link does
+not prove the model interpreted the evidence correctly. No real model quality or
+cost acceptance has been performed. See [M3 setup and acceptance](docs/M3_OPERATIONS.md)
+before configuring keys or enabling calls; web caching requires applicable storage rights.
+
 ## Sources and dates
 
 Ten topics: Technology, Economy, Finance, Music, AI Companies, AI Models,
@@ -179,7 +199,8 @@ DeepMind, Hugging Face, Mistral, Microsoft Research, MIT, ESA, NVIDIA Developer,
 Cloudflare and two GitHub API collections. See [source scope and usage notes](docs/CONTENT_SOURCES.md).
 Only short feed excerpts, repository metadata and optional reviewed thumbnail URLs
 are stored; no article-body scraping, image archiving, audio, repository code or
-AI-generated summaries. Google AI, DeepMind, MIT Research and Cloudflare feed images
+AI-generated summaries in the news ingestion pipeline. Optional generated reading help
+is separate and labeled. Google AI, DeepMind, MIT Research and Cloudflare feed images
 can appear with source credit. Other feeds remain text-only. Failed images restore
 the text layout. Images are loaded directly from reviewed media origins without a
 referrer; they are not copied into the project or treated as reusable project assets.
@@ -250,8 +271,8 @@ curl -f http://127.0.0.1:5173/api/health/
 curl -f http://127.0.0.1:5173/api/articles/
 ```
 
-Health returns `{"status":"ok","database":"connected","stage":"M2"}` after a real
-SQL query. It does not assert worker health or feed freshness. `/api/sources/` exposes
+Health returns `{"status":"ok","database":"connected","stage":"M3"}` after a real
+SQL query. It does not assert provider access, worker health or feed freshness. `/api/sources/` exposes
 active sources' last attempt/success and status without private diagnostics.
 Actual evidence and outstanding limits are in `docs/PROGRESS.md`.
 
@@ -282,8 +303,9 @@ and is not a normal restart step.
 
 ## Next milestones
 
-M2 public deployment and physical Safari acceptance remain pending. M3 adds cited
-AI search and language assistance. See
+M2 public deployment and physical Safari acceptance remain pending. M3 local code
+is implemented; real provider quality, freshness, translation and cost acceptance
+remain pending keys. See [M3 operations](docs/M3_OPERATIONS.md) and
 `docs/PROJECT_CONTEXT.md` for product scope. No repository or website has been
 published by this work. Choose a license and review personal context documents
 before making the repository public.

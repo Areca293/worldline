@@ -29,7 +29,7 @@ def health(request):
             cursor.fetchone()
     except DatabaseError:
         return Response({"status": "unavailable", "database": "unavailable"}, status=503)
-    return Response({"status": "ok", "database": "connected", "stage": "M2"})
+    return Response({"status": "ok", "database": "connected", "stage": "M3"})
 
 
 class DatabaseErrorMixin:
