@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "news",
+    "assistance",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -108,3 +109,27 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
     "loggers": {"news": {"handlers": ["console"], "level": "INFO", "propagate": False}},
 }
+
+# Local M3 is opt-in. Keys stay server-side; a model must be chosen explicitly.
+AI_ENABLED = os.environ.get("AI_ENABLED", "false").lower() == "true"
+BRAVE_SEARCH_API_KEY = os.environ.get("BRAVE_SEARCH_API_KEY", "")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "")
+
+
+def bounded_integer(name, default, maximum):
+    try:
+        value = int(os.environ.get(name, default))
+        if not 0 <= value <= maximum:
+            raise ValueError
+        return value
+    except ValueError:
+        raise ImproperlyConfigured(f"{name} must be an integer from 0 to {maximum}.") from None
+
+
+AI_USER_DAILY_LIMIT = bounded_integer("AI_USER_DAILY_LIMIT", "10", 100)
+AI_GLOBAL_DAILY_LIMIT = bounded_integer("AI_GLOBAL_DAILY_LIMIT", "50", 1000)
+AI_MAX_OUTPUT_TOKENS = max(256, bounded_integer("AI_MAX_OUTPUT_TOKENS", "1200", 4096))
+# Enable only with a Brave plan explicitly permitting storage of search results.
+AI_WEB_CACHE_SECONDS = bounded_integer("AI_WEB_CACHE_SECONDS", "0", 3600)
+LOGGING["loggers"]["assistance"] = {"handlers": ["console"], "level": "INFO", "propagate": False}
