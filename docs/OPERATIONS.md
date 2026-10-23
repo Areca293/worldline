@@ -49,7 +49,10 @@ Apply migrations 0006 (the trusted PostgreSQL `pg_trgm` extension) and 0007 (opt
 image metadata) before restarting API/worker containers. The database migration role
 needs permission to create this extension; no separate search server is needed.
 Spelling fallback runs only when scoped normal search returns no rows and is bounded
-to eight words. It scans the filtered collection; at much larger data volumes, measure
+to eight words of 4–40 ASCII alphanumeric characters. Alongside `pg_trgm`, generated
+whole-word patterns recognize single-character edits and adjacent transpositions;
+user input is never executed as a regular expression. No additional extension or
+migration is required. It scans the filtered collection; at much larger data volumes, measure
 latency before introducing a dedicated trigram vocabulary/index.
 
 A normal `import_feeds` refresh fills optional image URLs for the four reviewed

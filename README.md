@@ -140,7 +140,9 @@ accept up to 200 characters, combine with topics and pagination, and persist in 
 URL. **Search saved stories** only searches the signed-in reader's collection.
 If normal matching finds nothing within the current scope, English words of 4–40
 characters (at most eight words) get a conservative spelling-similarity fallback.
-For example, `chatgpd` can find collected ChatGPT stories. All query words must still
+This combines word similarity with a single-letter substitution, insertion, deletion
+or adjacent-letter swap, including typos near the start of a word. For example,
+`chatgpd`, `cjatgpt` and `cahtgpt` can find collected ChatGPT stories. All query words must still
 match; the page explicitly labels similar spellings and preserves the original URL
 query. Short terms and non-English queries do not expand. This is approximate keyword
 matching, not automatic correction or semantic AI search. Private searches only use

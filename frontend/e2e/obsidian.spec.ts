@@ -56,6 +56,17 @@ test('shows typo feedback and optional image without overlapping text, then reco
   await expect(card.locator('h3')).toHaveText(
     'ChatGPT research with a publisher image',
   )
+  for (const typo of ['cjatgpt', 'cahtgpt']) {
+    await page.getByRole('searchbox').fill(typo)
+    await page.getByRole('button', { name: 'Search', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`q=${typo}`))
+    await expect(
+      page.getByText(
+        `No exact matches. Showing similar spellings for “${typo}”.`,
+      ),
+    ).toBeVisible()
+    await expect(card).toBeVisible()
+  }
 })
 
 test('keeps sidebar controls reachable independently and source expansion out of the reading layout', async ({

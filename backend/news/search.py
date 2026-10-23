@@ -17,6 +17,24 @@ def article_vector():
     )
 
 
+def single_edit_pattern(token):
+    """A whole-word PostgreSQL pattern for one edit, including adjacent swaps.
+
+    Called only for validated 4–40 character ASCII alphanumeric tokens. All
+    alternatives have fixed lengths: no user regex, wildcards spanning words,
+    unbounded repetition or dictionary built from another reader's bookmarks.
+    """
+    alternatives = {token}
+    for i in range(len(token)):
+        alternatives.add(token[:i] + token[i + 1 :])  # Extra typed letter.
+        alternatives.add(token[:i] + "[a-z0-9]" + token[i + 1 :])  # Wrong letter.
+        if i + 1 < len(token):
+            alternatives.add(token[:i] + token[i + 1] + token[i] + token[i + 2 :])
+    for i in range(len(token) + 1):
+        alternatives.add(token[:i] + "[a-z0-9]" + token[i:])  # Missing letter.
+    return r"\m(?:" + "|".join(sorted(alternatives)) + r")\M"
+
+
 def search_articles(queryset, text):
     """Exact search first; conservative spelling fallback within the same scoped rows."""
     text = text.strip()
@@ -47,13 +65,15 @@ def search_articles(queryset, text):
     document = Concat(
         "title", Value(" "), "summary", Value(" "), "source__name", output_field=TextField()
     )
-    approximate = queryset
+    approximate = queryset.alias(spelling_document=document)
     rank = Value(0.0)
     for i, token in enumerate(tokens):
         name = f"spelling_{i}"
         approximate = approximate.annotate(
             **{name: TrigramStrictWordSimilarity(token, document)}
-        ).filter(**{f"{name}__gte": 0.5})
+        ).filter(
+            Q(**{f"{name}__gte": 0.5}) | Q(spelling_document__iregex=single_edit_pattern(token))
+        )
         rank = rank + F(name)
     return approximate.annotate(search_rank=rank).order_by(
         "-search_rank", F("published_at").desc(nulls_last=True), "-id"
