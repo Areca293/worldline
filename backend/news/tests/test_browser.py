@@ -27,6 +27,7 @@ def test_reading_in_real_browser(live_server, django_user_model, settings, tmp_p
     password = secrets.token_urlsafe(24)
     for name in ("browser-alice", "browser-bob"):
         django_user_model.objects.create_user(username=name, password=password)
+    django_user_model.objects.create_superuser(username="browser-admin", password=password)
     topic = Topic.objects.create(name="Music", slug="music")
     source = Source.objects.create(
         name="Browser test publisher", website_url="https://example.com/", is_active=True

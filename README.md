@@ -112,7 +112,13 @@ Select the filled star (Remove bookmark) to remove only your own bookmark. Sign-
 cache of personalized content. Anonymous requests cannot list or change bookmarks;
 user IDs supplied in query strings or bodies do not select another user's records.
 
-Sessions use Django's HttpOnly cookie. Login, logout and bookmark writes require
+Reader sessions use Django's HttpOnly cookie. Admin uses separate session and CSRF
+cookies scoped to `/admin/`; signing in or out on either surface leaves the other
+account and its CSRF token intact. The admin requires a separate login even if a
+staff account is signed into the reader. After upgrading, sign into admin again;
+if the old shared session already replaced your reader account, sign out of the
+reader and sign back into your own account once. Existing bookmarks are retained.
+Login, logout and bookmark writes require
 CSRF protection, including anonymous registration. Login has a 10-per-minute IP
 throttle and registration a 5-per-minute IP throttle. Local development uses a local
 cache; the production settings use shared Redis behind a single trusted Caddy proxy.
