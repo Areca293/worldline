@@ -115,6 +115,14 @@ AI_ENABLED = os.environ.get("AI_ENABLED", "false").lower() == "true"
 BRAVE_SEARCH_API_KEY = os.environ.get("BRAVE_SEARCH_API_KEY", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "")
+AI_MODEL_PROVIDER = os.environ.get("AI_MODEL_PROVIDER", "openai")
+if AI_MODEL_PROVIDER not in {"openai", "lmstudio"}:
+    raise ImproperlyConfigured("AI_MODEL_PROVIDER must be openai or lmstudio.")
+LM_STUDIO_BASE_URL = os.environ.get("LM_STUDIO_BASE_URL", "http://127.0.0.1:1234/v1")
+LM_STUDIO_MODEL = os.environ.get("LM_STUDIO_MODEL", "")
+LM_STUDIO_API_KEY = os.environ.get("LM_STUDIO_API_KEY", "")
+# Bump after changing model weights or LM Studio's saved inference defaults.
+LM_STUDIO_CONFIG_REVISION = os.environ.get("LM_STUDIO_CONFIG_REVISION", "1")
 
 
 def bounded_integer(name, default, maximum):
@@ -130,6 +138,7 @@ def bounded_integer(name, default, maximum):
 AI_USER_DAILY_LIMIT = bounded_integer("AI_USER_DAILY_LIMIT", "10", 100)
 AI_GLOBAL_DAILY_LIMIT = bounded_integer("AI_GLOBAL_DAILY_LIMIT", "50", 1000)
 AI_MAX_OUTPUT_TOKENS = max(256, bounded_integer("AI_MAX_OUTPUT_TOKENS", "1200", 4096))
+LM_STUDIO_TIMEOUT_SECONDS = max(1, bounded_integer("LM_STUDIO_TIMEOUT_SECONDS", "60", 180))
 # Enable only with a Brave plan explicitly permitting storage of search results.
 AI_WEB_CACHE_SECONDS = bounded_integer("AI_WEB_CACHE_SECONDS", "0", 3600)
 LOGGING["loggers"]["assistance"] = {"handlers": ["console"], "level": "INFO", "propagate": False}

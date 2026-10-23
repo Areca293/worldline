@@ -23,6 +23,7 @@ from news.models import Article, Source, Topic
 def enabled(settings):
     cache.clear()
     settings.AI_ENABLED = True
+    settings.AI_MODEL_PROVIDER = "openai"
     settings.BRAVE_SEARCH_API_KEY = "synthetic-search-key"
     settings.OPENAI_API_KEY = "synthetic-model-key"
     settings.OPENAI_MODEL = "synthetic-model"

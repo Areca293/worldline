@@ -1,4 +1,4 @@
-"""Small, fixed-host adapters. No URL from users/results is ever fetched."""
+"""Fixed external endpoints and a server-configured loopback model adapter."""
 
 import ipaddress
 import json
@@ -45,7 +45,64 @@ def plain(value, limit):
     return " ".join(strip_tags(value[: limit * 2]).split())[:limit]
 
 
-def request_json(method, url, headers, body=None):
+def local_endpoint():
+    """Allow only literal loopback or Docker Desktop's explicit host gateway.
+
+    Never accept a request-supplied endpoint, redirects, userinfo or URL parameters.
+    Docker's gateway is supported for a future container setup, not selected here.
+    """
+    try:
+        raw = settings.LM_STUDIO_BASE_URL
+        parts = urlsplit(raw)
+        if (
+            parts.scheme not in {"http", "https"}
+            or parts.hostname not in {"127.0.0.1", "localhost", "::1", "host.docker.internal"}
+            or parts.username is not None
+            or parts.password is not None
+            or parts.query
+            or parts.fragment
+            or parts.path.rstrip("/") != "/v1"
+            or re.search(r"[\x00-\x20\\]", raw)
+            or not parts.port
+        ):
+            raise ValueError
+        return raw.rstrip("/") + "/chat/completions"
+    except (ValueError, TypeError):
+        raise AssistanceError(
+            "not_configured", "The local model endpoint is not configured correctly."
+        ) from None
+
+
+def model_configuration():
+    """Fingerprint all request-affecting settings; never expose this to the API."""
+    if settings.AI_MODEL_PROVIDER == "lmstudio":
+        return {
+            "provider": "lmstudio",
+            "model": settings.LM_STUDIO_MODEL,
+            "endpoint": local_endpoint(),
+            "key": settings.LM_STUDIO_API_KEY,
+            "temperature": 0.2,
+            "timeout": settings.LM_STUDIO_TIMEOUT_SECONDS,
+            "revision": settings.LM_STUDIO_CONFIG_REVISION,
+            "max_tokens": settings.AI_MAX_OUTPUT_TOKENS,
+        }
+    return {
+        "provider": "openai",
+        "model": settings.OPENAI_MODEL,
+        "key": settings.OPENAI_API_KEY,
+        "max_tokens": settings.AI_MAX_OUTPUT_TOKENS,
+    }
+
+
+def model_configured():
+    try:
+        config = model_configuration()
+        return bool(config["model"] and (config["provider"] == "lmstudio" or config["key"]))
+    except AssistanceError:
+        return False
+
+
+def request_json(method, url, headers, body=None, *, timeout_seconds=30):
     pool = urllib3.PoolManager()
     response = None
     try:
@@ -54,7 +111,9 @@ def request_json(method, url, headers, body=None):
             url,
             headers={"Accept": "application/json", **headers},
             body=json.dumps(body).encode() if body is not None else None,
-            timeout=urllib3.Timeout(connect=3, read=25, total=30),
+            timeout=urllib3.Timeout(
+                connect=min(3, timeout_seconds), read=timeout_seconds, total=timeout_seconds
+            ),
             retries=False,
             redirect=False,
             preload_content=False,
@@ -152,12 +211,21 @@ limitations. Otherwise give concise supported paragraphs and state the scope lim
 Answer and limitations in English, except translate mode: paragraph text in
 Simplified Chinese and limitations in English. Summarize mode condenses only the
 provided excerpt. Explain mode restates it in simpler English without adding facts.
+For Chinese translations, use natural Chinese monetary units (万, 亿) while preserving
+the exact numeric value and original currency. USD 2.5 billion is 25亿美元, not
+2.5亿美元; EUR 12 million is 1200万欧元. Never convert currencies. Preserve dates,
+proper names, negation and uncertainty. For simple English, use short B1-level sentences.
+If evidence conflicts, describe each account with its own citation without choosing
+a winner. A description of the disagreement can be evidence_sufficient=true; a
+unique answer unsupported by the sources cannot be asserted.
+Before returning, check: false ALWAYS means paragraphs=[] (an empty array), with
+the reason only in limitations. Never include a paragraph when evidence_sufficient
+is false. A true result requires at least one paragraph with supporting source IDs.
 """
 
 
-def generate(operation, question, evidence):
-    ids = [row["id"] for row in evidence if row["text"]]
-    schema = {
+def evidence_schema(ids):
+    return {
         "type": "object",
         "properties": {
             "evidence_sufficient": {"type": "boolean"},
@@ -178,6 +246,15 @@ def generate(operation, question, evidence):
         "required": ["evidence_sufficient", "paragraphs", "limitations"],
         "additionalProperties": False,
     }
+
+
+def generate(operation, question, evidence):
+    ids = [row["id"] for row in evidence if row["text"]]
+    if not ids:
+        raise AssistanceError("no_text", "There is no source text to process.", 422)
+    schema = evidence_schema(ids)
+    if settings.AI_MODEL_PROVIDER == "lmstudio":
+        return generate_local(operation, question, evidence, schema, ids)
     data = request_json(
         "POST",
         "https://api.openai.com/v1/responses",
@@ -216,7 +293,81 @@ def generate(operation, question, evidence):
                     )
                 if content.get("type") == "output_text":
                     texts.append(content["text"])
-        result = json.loads("".join(texts))
+        return validate_answer("".join(texts), data.get("usage") or {}, ids)
+    except (ValueError, TypeError, KeyError, AttributeError):
+        raise invalid_answer() from None
+
+
+def invalid_answer():
+    return AssistanceError(
+        "invalid_answer",
+        "The answer could not be verified against its sources. Please try again.",
+        502,
+    )
+
+
+def generate_local(operation, question, evidence, schema, ids):
+    headers = {"Content-Type": "application/json"}
+    if settings.LM_STUDIO_API_KEY:
+        headers["Authorization"] = f"Bearer {settings.LM_STUDIO_API_KEY}"
+    data = request_json(
+        "POST",
+        local_endpoint(),
+        headers,
+        {
+            "model": settings.LM_STUDIO_MODEL,
+            "messages": [
+                {"role": "system", "content": INSTRUCTIONS},
+                {
+                    "role": "user",
+                    "content": json.dumps(
+                        {"operation": operation, "question": question, "evidence": evidence}
+                    ),
+                },
+            ],
+            "temperature": 0.2,
+            "max_tokens": settings.AI_MAX_OUTPUT_TOKENS,
+            "stream": False,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {"name": "evidence_answer", "strict": True, "schema": schema},
+            },
+        },
+        timeout_seconds=settings.LM_STUDIO_TIMEOUT_SECONDS,
+    )
+    try:
+        choices = data["choices"]
+        if not isinstance(choices, list) or len(choices) != 1:
+            raise ValueError
+        choice = choices[0]
+        if choice.get("finish_reason") != "stop":
+            raise AssistanceError(
+                "incomplete", "The model did not finish an answer. Please try again.", 502
+            )
+        message = choice["message"]
+        if message.get("refusal"):
+            raise AssistanceError(
+                "refused", "The model declined this request. Try a different question.", 422
+            )
+        if message.get("tool_calls") or message.get("role") != "assistant":
+            raise ValueError
+        # Never show/log reasoning_content, and never strip thinking or Markdown
+        # out of content to salvage an otherwise invalid answer.
+        usage = data.get("usage") or {}
+        tokens = {
+            "input_tokens": usage.get("prompt_tokens"),
+            "output_tokens": usage.get("completion_tokens"),
+        }
+        return validate_answer(message["content"], tokens, ids)
+    except (ValueError, TypeError, KeyError, AttributeError):
+        raise invalid_answer() from None
+
+
+def validate_answer(text, usage, ids):
+    try:
+        result = json.loads(text)
+        if set(result) != {"paragraphs", "evidence_sufficient", "limitations"}:
+            raise ValueError("shape")
         paragraphs = result["paragraphs"]
         sufficient = result["evidence_sufficient"]
         if type(sufficient) is not bool or not isinstance(paragraphs, list) or len(paragraphs) > 8:
@@ -227,7 +378,8 @@ def generate(operation, question, evidence):
             raise ValueError("length")
         for p in paragraphs:
             if (
-                not isinstance(p["text"], str)
+                set(p) != {"text", "source_ids"}
+                or not isinstance(p["text"], str)
                 or not p["text"].strip()
                 or not isinstance(p["source_ids"], list)
                 or not p["source_ids"]
@@ -235,7 +387,6 @@ def generate(operation, question, evidence):
                 raise ValueError("paragraph")
             if any(type(i) is not int or i not in ids for i in p["source_ids"]):
                 raise ValueError("citation")
-        usage = data.get("usage") or {}
         tokens = {key: usage.get(key) for key in ("input_tokens", "output_tokens")}
         if any(v is not None and (type(v) is not int or v < 0) for v in tokens.values()):
             raise ValueError("usage")
@@ -245,8 +396,4 @@ def generate(operation, question, evidence):
             "evidence_sufficient": sufficient,
         }, tokens
     except (ValueError, TypeError, KeyError, AttributeError):
-        raise AssistanceError(
-            "invalid_answer",
-            "The answer could not be verified against its sources. Please try again.",
-            502,
-        ) from None
+        raise invalid_answer() from None

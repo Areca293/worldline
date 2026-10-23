@@ -14,11 +14,11 @@ from .models import QuotaDay, ResultCache, UsageEvent
 from .providers import AssistanceError
 
 logger = logging.getLogger("assistance")
-PROMPT_VERSION = "m3-evidence-v1"
+PROMPT_VERSION = "m3-evidence-v2-money-and-empty"
 
 
 def capabilities():
-    model = bool(settings.AI_ENABLED and settings.OPENAI_API_KEY and settings.OPENAI_MODEL)
+    model = bool(settings.AI_ENABLED and providers.model_configured())
     search = bool(settings.AI_ENABLED and settings.BRAVE_SEARCH_API_KEY)
     return {"web_search": search, "answers": search and model, "reading_help": model}
 
@@ -78,8 +78,7 @@ def execute(user, operation, inputs, run, ttl):
                 PROMPT_VERSION,
                 operation,
                 inputs,
-                settings.OPENAI_MODEL,
-                settings.OPENAI_API_KEY,
+                providers.model_configuration(),
                 settings.BRAVE_SEARCH_API_KEY,
                 ttl,
             ],
