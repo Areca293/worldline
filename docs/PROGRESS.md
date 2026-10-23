@@ -14,6 +14,28 @@
   提取；API 再次校验，不抓正文、不代理任意图片、不改变文章身份。29 项图片/RSS/API
   测试通过，0007 迁移已应用，check 与迁移一致性通过。图片 UI 在阶段 3 接入。
 
+- 阶段 3（2026-10-23 完成）：Modern Obsidian 黑白银界面覆盖首页、详情、收藏、登录、
+  注册、404 和错误状态；本地字体换为 DM Serif Display italic / Geist Mono / Inter 并保留
+  许可。桌面侧栏独立滚动、排序与数量前移，来源状态移至分页后；手机分类独立横滑。
+  图片与文字采用独立网格列，保留来源署名、原始颜色；缺图/加载失败恢复纯文字布局。
+- 真实图片导入已完成：DeepMind 64、Google AI 19、MIT 47、Cloudflare 20 条更新，四源
+  新建均为 0，文章身份与收藏保留。真实页面已核实图片加载、chatgpd 得到 28 条近似结果。
+  Linux Docker worker/Beat 已重建并运行，后续定时导入使用新图片规则。
+- 最终验证：后端 **75 passed、2 deselected**；Django check、迁移一致性、Ruff lint/format
+  通过；前端 **10 passed**、TypeScript/Vite build 通过。浏览器驱动 **1 passed、76 deselected**，
+  内含 **20 桌面/手机场景通过**，包括四宽度、三字体、独立侧栏滚动、图片失败回退、
+  错字提示、键盘、减弱动效、分页及既有账号/私人收藏流程。
+- 恢复记录：上次因额度使自动审批未完成的浏览器测试已重新正常执行；修复字体导入路径。
+  综合测试曾并发争用同一临时测试库，改为顺序运行后全部通过，未触及正常数据库。
+  自动生成的 0007 迁移仅补齐 Ruff 格式，无历史改写。
+- 使用 design-taste-frontend 的 app-screen 流程；方向 True-black flat，seed 1754154410，
+  按用户明确要求保留三字体、银色渐变与玻璃。实际 CUA 四宽度复查与设计取舍详见
+  OBSIDIAN_PLAN.md。未运行技能 inspect.mjs，不宣称其通过；源码 lint 0 FAIL / 5 WARN，
+  警告均对应来源标签及用户指定视觉元素。正式页面未加入假数据、营销入口或 AI 功能。
+- 本轮完成，未 push 或公开部署。截图及报告保存在系统临时目录，未新增项目垃圾文件；
+  .gitignore 无需修改。拼写回退范围与图片源限制见 README / CONTENT_SOURCES.md；
+  HTTPS 公开部署和真机 Safari 验收仍待服务器、域名及设备环境。
+
 ## 内容覆盖扩展（2026-10-22）
 
 - 本轮按 `CONTENT_EXPANSION.md` 分为来源、GitHub 数据、界面与综合验收三阶段。

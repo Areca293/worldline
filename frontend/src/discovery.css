@@ -1,167 +1,149 @@
 .story-search {
-  margin: 0 0 32px;
-  max-width: 780px;
+  padding: 16px 20px;
+  margin: 0 0 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
 }
 .story-search label {
   display: block;
-  font-weight: 600;
-  margin-bottom: 10px;
+  font: 13px/1.5 var(--mono);
+  margin-bottom: 8px;
 }
 .search-controls {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 12px;
 }
 .search-controls input {
   flex: 1 1 180px;
-  width: 100%;
-  min-width: 0;
-  min-height: 48px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: white;
-  color: var(--ink);
-  padding: 12px 14px;
-  font: inherit;
-}
-.search-controls .button {
-  min-height: 48px;
+  background: transparent;
 }
 .clear-search {
-  min-height: 44px;
-  padding: 8px;
+  padding: 8px 12px;
   background: transparent;
-  border: 0;
-  color: var(--ink);
+  border-color: transparent;
   text-decoration: underline;
-}
-.story-search p,
-.source-updates {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--muted);
+  font: 12px/1.5 var(--mono);
 }
 .story-search p {
-  margin: 10px 0 0;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .source-updates {
-  margin: 16px 0;
+  margin-top: 32px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  padding: 8px 24px;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
-.source-updates summary {
+.source-updates summary,
+.discovery-scope summary {
   cursor: pointer;
-  color: var(--ink);
-  font-weight: 600;
-  padding: 12px 0;
   min-height: 44px;
+  padding: 12px 0;
+  color: var(--ink);
+  font: 13px/1.5 var(--mono);
+}
+.source-updates > p {
+  color: var(--muted);
+  margin: 8px 0 16px;
 }
 .source-updates ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 0 32px;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .source-updates li {
+  padding: 20px 0;
   border-top: 1px solid var(--line);
-  padding: 14px 0;
 }
 .source-updates strong,
 .source-updates span {
   display: block;
 }
 .source-updates strong {
-  color: var(--ink);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  font-weight: 550;
 }
-.source-updates button {
+.source-updates span {
+  color: var(--muted);
+}
+.source-updates button,
+.filter-error button {
   min-height: 44px;
-  background: transparent;
-  border: 0;
+  padding: 8px 12px;
   color: var(--ink);
+  background: transparent;
   text-decoration: underline;
 }
-.update-warning {
-  color: #8a3a24;
+.source-updates .update-warning {
+  color: var(--ink);
+  border-left: 2px solid var(--ink);
+  padding-left: 12px;
   margin-top: 8px;
 }
-.offline-notice {
-  background: #fff0dc;
-  color: #643d13;
-  padding: 16px 20px;
-  border-left: 3px solid #8a581e;
+.offline-notice,
+.search-feedback {
+  background: var(--raised);
+  padding: 12px 16px;
+  border-left: 2px solid var(--ink);
+  margin: 16px 0;
+  font-size: 14px;
 }
-@media (max-width: 800px) {
-  .source-updates {
-    width: 100%;
-    margin: 0 0 20px;
-  }
-}
-
 .discovery-order {
   display: grid;
-  gap: 10px;
-  margin: 0 0 20px;
+  gap: 8px;
+  font: 12px/1.5 var(--mono);
 }
 .discovery-order label {
-  font-size: 14px;
   color: var(--muted);
 }
 .discovery-order select {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: white;
-  color: var(--ink);
-  font: inherit;
-  font-size: 14px;
+  padding: 8px 10px;
 }
 .discovery-scope {
   color: var(--muted);
   font-size: 14px;
-  line-height: 1.65;
-  margin: 0 0 24px;
-  max-width: 70ch;
+  margin-bottom: 20px;
+}
+.discovery-scope p {
+  max-width: 75ch;
+  margin-top: 8px;
 }
 .repository-stats {
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 20px 0;
+  font: 12px/1.7 var(--mono);
+  margin: 20px 0 0;
   font-variant-numeric: tabular-nums;
 }
 .repository-figures {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 24px;
+  gap: 8px 24px;
+}
+.repository-figures strong {
+  font-weight: 500;
+  color: var(--ink);
 }
 .repository-observed {
   display: block;
-  margin-top: 4px;
-  font-size: 13px;
-}
-.lead-card .repository-stats {
-  color: inherit;
+  color: var(--muted);
+  margin-top: 8px;
 }
 @media (max-width: 800px) {
-  .discovery-order {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 0 0 12px;
+  .story-search {
+    margin-bottom: 16px;
+    padding: 12px;
   }
-  .discovery-order select {
-    flex: 1;
+  .source-updates {
+    padding: 8px 20px;
   }
-}
-
-.discovery-scope summary {
-  cursor: pointer;
-  min-height: 44px;
-  display: list-item;
-  padding: 10px 0;
-}
-.discovery-scope p {
-  margin: 8px 0 0;
 }

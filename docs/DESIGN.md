@@ -1,5 +1,9 @@
 # Worldline reading desk
 
+> Historical design (2026-10-21). Superseded by the user-directed Modern Obsidian
+> system in [OBSIDIAN_PLAN.md](OBSIDIAN_PLAN.md) on 2026-10-23. The notes below
+> preserve the earlier design decisions; they are not the current colour/font specification.
+
 ## Brief and audience
 
 Worldline is an English reading home for a curious reader using spare moments on a

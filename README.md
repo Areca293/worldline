@@ -119,6 +119,12 @@ cache; the production settings use shared Redis behind a single trusted Caddy pr
 
 ## Reading controls
 
+The responsive Modern Obsidian interface uses local DM Serif Display italic,
+Geist Mono and Inter fonts with their bundled licenses. Desktop filters scroll
+independently within the viewport; mobile topics scroll horizontally inside their
+own row. Source updates sit after the content and pagination, so an expanded source
+list cannot stretch the sidebar. Real content is never clipped to fit equal cards.
+
 **Search stories** searches stored titles and descriptions using English keyword
 matching (including word stems), with titles ranked above descriptions. All significant
 words must match those fields; a source name or repository name containing the search
@@ -126,6 +132,13 @@ text also matches. Try `OpenAI`, `Mistral`, or `skills`. It does not search the 
 unavailable full articles, or answer natural-language questions with AI. Searches
 accept up to 200 characters, combine with topics and pagination, and persist in the
 URL. **Search saved stories** only searches the signed-in reader's collection.
+If normal matching finds nothing within the current scope, English words of 4–40
+characters (at most eight words) get a conservative spelling-similarity fallback.
+For example, `chatgpd` can find collected ChatGPT stories. All query words must still
+match; the page explicitly labels similar spellings and preserves the original URL
+query. Short terms and non-English queries do not expand. This is approximate keyword
+matching, not automatic correction or semantic AI search. Private searches only use
+the signed-in reader's bookmarks. PostgreSQL `pg_trgm` is installed by migration 0006.
 Clear search restores browsing. Offline and failed requests have retry guidance.
 
 Article and repository titles open the in-app detail. The diagonal arrow opens the source
@@ -156,8 +169,12 @@ Agents & Skills, Open Source, Science and Security. The original NASA, BEA, Fede
 Reserve and Library of Congress feeds remain. New sources include OpenAI, Google AI,
 DeepMind, Hugging Face, Mistral, Microsoft Research, MIT, ESA, NVIDIA Developer,
 Cloudflare and two GitHub API collections. See [source scope and usage notes](docs/CONTENT_SOURCES.md).
-Only short feed excerpts or repository metadata are stored; no article-body scraping,
-photos, audio, repository code or AI-generated summaries.
+Only short feed excerpts, repository metadata and optional reviewed thumbnail URLs
+are stored; no article-body scraping, image archiving, audio, repository code or
+AI-generated summaries. Google AI, DeepMind, MIT Research and Cloudflare feed images
+can appear with source credit. Other feeds remain text-only. Failed images restore
+the text layout. Images are loaded directly from reviewed media origins without a
+referrer; they are not copied into the project or treated as reusable project assets.
 
 GitHub collections sample up to 30 candidates each per hourly import, filtered for
 recent activity and identified licenses. They are not a complete GitHub index or

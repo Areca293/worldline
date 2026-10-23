@@ -43,6 +43,20 @@ In admin, inspect Sources and Feed runs. Error records contain safe categories,
 not response bodies. If PostgreSQL is unavailable, the attempt cannot be persisted;
 consult worker logs. Disabling a source prevents new queued attempts from fetching it.
 
+## Search and optional images
+
+Apply migrations 0006 (the trusted PostgreSQL `pg_trgm` extension) and 0007 (optional
+image metadata) before restarting API/worker containers. The database migration role
+needs permission to create this extension; no separate search server is needed.
+Spelling fallback runs only when scoped normal search returns no rows and is bounded
+to eight words. It scans the filtered collection; at much larger data volumes, measure
+latency before introducing a dedicated trigram vocabulary/index.
+
+A normal `import_feeds` refresh fills optional image URLs for the four reviewed
+media-capable feeds. It preserves article identity and bookmarks. Image files are
+never fetched by the worker; browsers load them lazily from reviewed publisher hosts.
+An unavailable image leaves the article readable with its existing source link.
+
 ## Repository observations
 
 After upgrading, run migrations and `seed_sources` before rebuilding the scheduler.

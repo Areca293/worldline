@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { DiscoveryOrder, RepositoryStats } from './repositories'
 import { OfflineNotice, SearchStories, SourceUpdates } from './discovery'
 import { PageLinks, PageSize, useReadingPages } from './pagination'
@@ -36,7 +36,6 @@ function ConnectionStatus() {
   const connected = !health.isError && health.data?.database === 'connected'
   return (
     <span className={`connection ${connected ? 'connected' : ''}`}>
-      <span className="status-dot" />
       {health.isPending
         ? 'Checking connection'
         : connected
@@ -96,6 +95,11 @@ function ArticleCard({
   article: Article
   lead?: boolean
 }) {
+  const [failedImage, setFailedImage] = useState('')
+  const image =
+    article.image_url && article.image_url !== failedImage
+      ? safeExternalUrl(article.image_url)
+      : undefined
   return (
     <article className={lead ? 'lead-card' : 'article-row'}>
       <div className="article-copy">
@@ -119,11 +123,37 @@ function ArticleCard({
             </a>
           )}
         </div>
-        <p>
-          {article.summary ||
-            'No summary was provided by the source. Open the original article to read more.'}
-        </p>
-        <RepositoryStats article={article} />
+        <div className={`card-content ${image ? 'with-media' : ''}`}>
+          <div className="card-text">
+            <p>
+              {article.summary ||
+                'No summary was provided by the source. Open the original article to read more.'}
+            </p>
+            <RepositoryStats article={article} />
+          </div>
+          {image && (
+            <figure className="card-media">
+              <a
+                href={safeExternalUrl(article.original_url)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`View image source: ${article.title} (opens in a new tab)`}
+              >
+                <img
+                  src={image}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                  onError={() => setFailedImage(article.image_url || '')}
+                />
+              </a>
+              <figcaption>
+                {article.image_credit || `Via ${article.source.name}`}
+              </figcaption>
+            </figure>
+          )}
+        </div>
         <a
           className="card-source"
           href={safeExternalUrl(article.source.website_url)}
@@ -145,24 +175,6 @@ function ArticleCard({
         </div>
       </div>
     </article>
-  )
-}
-
-function ReadingNote() {
-  return (
-    <aside className="reading-note">
-      <div className="eyebrow">ROOM FOR DISCOVERY</div>
-      <h2>
-        Good questions <br />
-        start with a <br />
-        little curiosity.
-      </h2>
-      <p>
-        Step outside your usual reading. A different field can offer a whole new
-        perspective.
-      </p>
-      <div className="note-bottom">More fields. More possibilities.</div>
-    </aside>
   )
 }
 
@@ -202,18 +214,14 @@ function Home() {
     <>
       <section className="intro">
         <div>
-          <div className="eyebrow intro-kicker">
-            YOUR WINDOW TO WHAT MATTERS
-          </div>
           <h1>
             A wider world.
             <br />A curious mind.
           </h1>
         </div>
         <p>
-          A little perspective for your everyday.
-          <br /> Follow AI, open source, science and the wider world.
-          <br className="desktop-break" /> Find a story. Follow its source.
+          Stories and projects from reviewed sources. Follow AI, open source and
+          the wider world.
         </p>
       </section>
       <SearchStories
@@ -223,10 +231,6 @@ function Home() {
       />
       <div className="reading-desk">
         <aside className="reading-tools">
-          <DiscoveryOrder
-            value={sort}
-            onChange={(value) => update({ sort: value, page: '' })}
-          />
           <nav className="topics" aria-label="Filter by topic">
             <button
               aria-pressed={!topic}
@@ -247,12 +251,17 @@ function Home() {
             ))}
             <span className="edition">FROM THE SOURCES</span>
           </nav>
-          <PageSize
-            key={size}
-            size={size}
-            onChange={(value) => update({ page_size: value, page: '' })}
-          />
-          <SourceUpdates />
+          <div className="reading-options">
+            <DiscoveryOrder
+              value={sort}
+              onChange={(value) => update({ sort: value, page: '' })}
+            />
+            <PageSize
+              key={size}
+              size={size}
+              onChange={(value) => update({ page_size: value, page: '' })}
+            />
+          </div>
           {topics.isError && (
             <p role="status" className="filter-error">
               Topics are unavailable.{' '}
@@ -261,7 +270,6 @@ function Home() {
               </button>
             </p>
           )}
-          <ReadingNote />
         </aside>
         <div className="reading-stream">
           {articles.data?.approximate_search && articles.data.count > 0 && (
@@ -314,8 +322,8 @@ function Home() {
           ) : (
             <div aria-busy={articles.isFetching}>
               {lead && (
-                <section className="lead-section">
-                  <div className="section-title">
+                <section className="featured">
+                  <div className="section-heading">
                     <h2>In focus</h2>
                   </div>
                   <ArticleCard article={lead} lead />
@@ -323,7 +331,7 @@ function Home() {
               )}
               <div className="reading-layout">
                 <section className="stories">
-                  <div className="section-title">
+                  <div className="section-heading">
                     <h2>
                       {query
                         ? 'Search results'
@@ -359,6 +367,7 @@ function Home() {
           )}
         </div>
       </div>
+      <SourceUpdates />
     </>
   )
 }
@@ -517,7 +526,6 @@ function SavedStories() {
     )
   return (
     <section className="saved-page">
-      <div className="eyebrow">YOUR PERSONAL COLLECTION</div>
       <h1>Worth coming back to.</h1>
       <p>Stories you’ve saved, ready when you are.</p>
       <SearchStories
@@ -601,14 +609,10 @@ export default function App() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <div className="demo-banner">
-        <span className="demo-pill">WORLDLINE</span> Stories and projects from
-        reviewed sources. Follow the source. Keep your perspective.
-      </div>
       <div className="shell">
         <header className="header">
           <Link className="brand" to="/" aria-label="Worldline home">
-            worldline<span className="brand-period">.</span>
+            WORLDLINE
           </Link>
           <div className="header-right">
             <AccountNav />
@@ -627,7 +631,7 @@ export default function App() {
         </main>
         <footer>
           <Link className="footer-brand" to="/">
-            worldline.
+            WORLDLINE
           </Link>
           <span>A small daily habit. A broader perspective.</span>
           <ConnectionStatus />

@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('news', '0006_search_trigrams'),
+        ("news", "0006_search_trigrams"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='article',
-            name='image_credit',
+            model_name="article",
+            name="image_credit",
             field=models.CharField(blank=True, max_length=240),
         ),
         migrations.AddField(
-            model_name='article',
-            name='image_url',
+            model_name="article",
+            name="image_url",
             field=models.URLField(blank=True, max_length=2048),
         ),
     ]

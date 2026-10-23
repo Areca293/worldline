@@ -8,6 +8,8 @@ export interface Article {
   title: string
   topic: Topic
   source: { name: string; website_url: string }
+  image_url?: string
+  image_credit?: string
   summary: string
   original_url: string
   is_bookmarked: boolean

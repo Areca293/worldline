@@ -75,7 +75,7 @@ export function AccountNav() {
         ) : (
           <>
             <Link to="/login">Sign in</Link>
-            <Link to="/register">Register</Link>
+            <Link to="/register">Create account</Link>
           </>
         )}
       </nav>
@@ -214,7 +214,6 @@ export function Login() {
     )
   return (
     <section className="login-page">
-      <div className="eyebrow">YOUR READING, REMEMBERED</div>
       <h1>Welcome back.</h1>
       <p>Sign in to keep stories for another moment.</p>
       <form
@@ -313,7 +312,6 @@ export function Register() {
       : undefined
   return (
     <section className="login-page">
-      <div className="eyebrow">YOUR READING, REMEMBERED</div>
       <h1>Create your account.</h1>
       <p>Keep your discoveries in one place.</p>
       <form

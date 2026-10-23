@@ -84,6 +84,22 @@ def test_reading_in_real_browser(live_server, django_user_model, settings, tmp_p
             star_change=change,
             baseline_at=observed - timedelta(hours=24) if change is not None else None,
         )
+    image_source = Source.objects.create(
+        name="MIT image fixture",
+        website_url="https://news.mit.edu/",
+        feed_url="https://news.mit.edu/rss/research",
+    )
+    Article.objects.create(
+        title="ChatGPT research with a publisher image",
+        slug="browser-image-story",
+        source=image_source,
+        topic=Topic.objects.get(slug="science"),
+        original_url="https://news.mit.edu/fixture-story",
+        summary="Original image layout fixture.",
+        image_url="https://news.mit.edu/sites/default/files/worldline-fixture.png",
+        image_credit="Original browser test image",
+        published_at=timezone.now() - timedelta(days=400),
+    )
     with socket.socket() as available:
         available.bind(("127.0.0.1", 0))
         port = available.getsockname()[1]

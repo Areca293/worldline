@@ -112,7 +112,7 @@ test('registers a reader, keeps the session after reload and can sign in again',
 }, testInfo) => {
   const username = `new-${testInfo.project.name}`
   await page.goto('/')
-  await page.getByRole('link', { name: 'Register', exact: true }).click()
+  await page.getByRole('link', { name: 'Create account', exact: true }).click()
   await page.getByLabel('Username', { exact: true }).fill(username)
   await page
     .getByLabel('Email', { exact: true })
@@ -209,8 +209,9 @@ test('keeps the reading desk usable at wide, tablet and narrow widths', async ({
     expect(
       await page.evaluate(
         () =>
-          document.fonts.check('16px "Archivo Variable"') &&
-          document.fonts.check('16px "Literata Variable"'),
+          document.fonts.check('16px "Inter Variable"') &&
+          document.fonts.check('13px "Geist Mono Variable"') &&
+          document.fonts.check('italic 16px "DM Serif Display"'),
       ),
     ).toBe(true)
     const unclipped = async () => {
@@ -251,7 +252,9 @@ test('keeps the reading desk usable at wide, tablet and narrow widths', async ({
       path: testInfo.outputPath(`detail-${width}.png`),
       fullPage: true,
     })
-    await page.getByRole('link', { name: 'Register', exact: true }).click()
+    await page
+      .getByRole('link', { name: 'Create account', exact: true })
+      .click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       'Create your account.',
     )
