@@ -1,5 +1,11 @@
 # M3 — local research and reading assistance
 
+Update 2026-10-24: the original no-key delivery below has been extended with actual
+LM Studio integration. See [local plan](LOCAL_MODEL_PLAN.md),
+[real acceptance](LOCAL_MODEL_ACCEPTANCE.md) and [current startup](M3_OPERATIONS.md).
+OpenAI remains optional; live Brave retrieval is still pending. Earlier no-model
+statements below describe the previous phase, not the current local configuration.
+
 ## Scope and delivery
 
 The user confirmed no provider keys are available. Build working local integration

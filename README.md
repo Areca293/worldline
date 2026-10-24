@@ -7,8 +7,10 @@ Worldline is a replaceable working name.
 14 official RSS feeds and two GitHub repository collections, observed star growth,
 scheduled updates/retries, source status, keyword search, registration and private bookmarks.
 Separate cited web research, excerpt summary/translation/simple English and attributed
-daily quotations are implemented. AI is disabled by default; real provider quality and
-cost acceptance await keys. Production containers and CI are included. Public HTTPS
+daily quotations are implemented. An optional LM Studio provider now runs reading
+assistance locally; real API and webpage checks are documented with quality limits.
+AI remains disabled by default in fresh installs. Live Brave research and paid-provider
+acceptance await keys. Production containers and CI are included. Public HTTPS
 deployment, physical iPhone Safari acceptance and iOS packaging remain pending.
 
 ## Architecture
@@ -21,7 +23,8 @@ Manual import command → the same audited import path
 
 Vite proxies `/api/` to Django on port 8000, preserving the browser's Host for
 same-origin CSRF checks. All data access goes through Django. Core reading needs no paid
-services; optional assistance uses server-side Brave/OpenAI keys. Production must also use a same-origin deployment;
+services; optional assistance uses a local LM Studio model or server-side OpenAI keys,
+and web research separately needs Brave. Production must also use a same-origin deployment;
 use `compose.production.yaml` for Caddy HTTPS, Gunicorn, workers and private data services.
 
 ```text
@@ -183,11 +186,13 @@ assistance** for a summary, Simplified Chinese translation or simpler English, b
 only on the saved source excerpt or repository description. Requests require sign-in,
 CSRF and explicit submission; there is no automatic AI work on page load.
 
-Without provider keys, the pages explicitly show unconfigured states and ordinary
-reading remains available. Attributed daily quotations work without keys. Caches,
+Without a configured model or search provider, the affected pages explicitly show
+unconfigured states and ordinary reading remains available. Local reading does not
+require an OpenAI key. Attributed daily quotations work without keys. Caches,
 daily request quotas and safe usage metrics are included. A valid source link does
-not prove the model interpreted the evidence correctly. No real model quality or
-cost acceptance has been performed. See [M3 setup and acceptance](docs/M3_OPERATIONS.md)
+not prove the model interpreted the evidence correctly. Real local-model checks and
+known terminology/quality limits are in [local acceptance](docs/LOCAL_MODEL_ACCEPTANCE.md).
+See [daily local startup and M3 setup](docs/M3_OPERATIONS.md)
 before configuring keys or enabling calls; web caching requires applicable storage rights.
 
 ## Sources and dates
@@ -304,8 +309,9 @@ and is not a normal restart step.
 ## Next milestones
 
 M2 public deployment and physical Safari acceptance remain pending. M3 local code
-is implemented; real provider quality, freshness, translation and cost acceptance
-remain pending keys. See [M3 operations](docs/M3_OPERATIONS.md) and
+is implemented and local reading has been exercised with Spark through LM Studio.
+Broader quality evaluation, live web freshness and paid-provider cost acceptance
+remain pending. See [M3 operations](docs/M3_OPERATIONS.md) and
 `docs/PROJECT_CONTEXT.md` for product scope. No repository or website has been
 published by this work. Choose a license and review personal context documents
 before making the repository public.

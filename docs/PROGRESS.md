@@ -1,9 +1,9 @@
 # 实际进度
 
-## M3 本地模型接入（2026-10-23，进行中）
+## M3 本地模型接入（2026-10-24 完成本轮交付）
 
 - 用户授权接入已加载 Spark 模型，保留现有参数，不购买服务或公开接口。计划见
-  `LOCAL_MODEL_PLAN.md`。当前代码检查确认仍是 OpenAI Responses 固定调用；Git 起点干净。
+  `LOCAL_MODEL_PLAN.md`。开始时检查确认只有 OpenAI Responses 固定调用；Git 起点干净。
 - 已核实 Bionic 1.1.9+6（提供 LM Studio API/CLI）、GGUF Q4_K_M 4.4B、实际模型 ID
   `spark-x2.6-4b`。下载记录来源 XHToken/Spark-X2.6-4B-GGUF，经 LM Studio HF 代理，
   文件大小 3,543,441,312；GGUF 选中引擎 llama.cpp 2.64.0。上下文 300544、parallel 4，
@@ -30,7 +30,17 @@
   **1 passed、157 deselected**（**28 个桌面/手机场景**），含明确的 502/504 错误 fixture。
   真正模型和网页调用与 mock 测试分别记录；未测试冷模型重载，未宣称大范围质量稳定。
 - `.env` 仅增改本地模型相关字段，其他内容保留且不入 Git。当前阅读辅助已启用；
-  Brave 尚未配置，真实联网问答未完成。下一步是最终回归和日常启动文档。
+  Brave 尚未配置，真实联网问答未完成。
+- 阶段 3：更新 README、M3_OPERATIONS 与计划，区分源代码默认关闭和本机已启用，给出
+  保留现有模型参数的日常启动步骤，以及宿主机/Docker 地址区别；未扩大监听范围。
+  全量后端 **156 passed、2 deselected**；Redis/Celery **1 passed、157 deselected**；
+  前端 **18 passed**、构建通过，浏览器 **28 场景通过**；Django check、迁移一致性、
+  Ruff lint/format、git diff --check 通过。所有数据库套件顺序运行，没有新迁移。
+- 最终实查：health connected/M3；reading_help=true，web_search/answers=false；
+  本地服务运行于 127.0.0.1:1235，恢复原加载模型。`.env` 仍被 Git 忽略；原数据保留。
+  临时测试材料/截图均位于系统临时目录，权重未进入项目，无需新增忽略规则。
+- 本轮本地接入完成，未 push、未公开部署或购买服务。保留限制：Brave 实时检索未验收，
+  冷模型加载未计时，小样例不代表模型普遍稳定；NASA 术语翻译、说明文字自然度仍需人工核对。
 
 ## M3：AI 搜索与英语辅助，本地开发（2026-10-23）
 

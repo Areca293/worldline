@@ -26,3 +26,14 @@ returned false with nonempty paragraphs: valid JSON but rejected by Worldline's
 semantic shape contract. Keep this failure in acceptance history; strengthen the
 prompt and retain strict rejection instead of silently rewriting the result.
 No Brave key is configured. Real web research remains pending search access.
+
+## Completed 2026-10-24
+
+- Phase 1: `7d283c6 feat: support bounded local LM Studio inference`.
+- Phase 2: `3595289 fix: validate local model language and recovery behavior`.
+- Phase 3: full regression and current startup documentation completed; see
+  [PROGRESS.md](PROGRESS.md) for actual counts and
+  [LOCAL_MODEL_ACCEPTANCE.md](LOCAL_MODEL_ACCEPTANCE.md) for real outputs and limits.
+
+All agreed independent local work is complete. Brave research, broad model quality
+and cold model-load measurement remain explicitly unaccepted. No public deployment.
