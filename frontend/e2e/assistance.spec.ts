@@ -1,5 +1,51 @@
 import { expect, test } from '@playwright/test'
 
+test('reading failures stay visible without replacing the stored excerpt', async ({
+  page,
+}) => {
+  // Explicit HTTP error fixtures exercise the UI, not real model generation.
+  await page.route('**/api/auth/session/', (route) =>
+    route.fulfill({
+      json: { user: { id: 999, username: 'UI-fixture' }, csrfToken: 'fixture' },
+    }),
+  )
+  await page.route('**/api/ai/status/', (route) =>
+    route.fulfill({
+      json: {
+        web_search: false,
+        answers: false,
+        reading_help: true,
+        allowance: null,
+      },
+    }),
+  )
+  let failure = {
+    status: 502,
+    detail:
+      'The answer could not be verified against its sources. Please try again.',
+  }
+  await page.route('**/api/ai/articles/browser-test-story/', (route) =>
+    route.fulfill({
+      status: failure.status,
+      json: { detail: failure.detail },
+    }),
+  )
+  await page.goto('/articles/browser-test-story')
+  await page.getByText('Reading assistance', { exact: true }).click()
+  await page.getByRole('button', { name: 'Process excerpt' }).click()
+  await expect(page.getByRole('alert')).toContainText('could not be verified')
+  await expect(
+    page.getByText(
+      'An original fixture used only in the disposable browser-test database.',
+      { exact: true },
+    ),
+  ).toBeVisible()
+  failure = { status: 504, detail: 'The provider timed out. Please try again.' }
+  await page.getByRole('button', { name: 'Try assistance again' }).click()
+  await expect(page.getByRole('alert')).toContainText('timed out')
+  await expect(page.getByText('AI-generated', { exact: false })).toHaveCount(0)
+})
+
 test('unconfigured M3 keeps real reading and verified quotations available', async ({
   page,
 }, testInfo) => {

@@ -4,10 +4,21 @@ import json
 from unittest.mock import Mock, patch
 
 import pytest
+import urllib3
 
 from assistance import providers, services
 from assistance.providers import AssistanceError
 from assistance.tests.test_assistance import ANSWER, EVIDENCE
+
+
+def test_stopped_local_server_is_unavailable_not_timeout():
+    with patch("assistance.providers.urllib3.PoolManager") as pool:
+        pool.return_value.request.side_effect = urllib3.exceptions.NewConnectionError(
+            None, "refused"
+        )
+        with pytest.raises(AssistanceError, match="provider_unavailable") as error:
+            providers.request_json("POST", "http://127.0.0.1:1235/v1/chat/completions", {})
+        assert error.value.status == 503
 
 
 @pytest.fixture
@@ -53,7 +64,9 @@ def test_local_contract_without_openai_key(local):
     assert body["model"] == "fixture-model" and body["temperature"] == 0.2
     assert body["max_tokens"] == 1200 and body["stream"] is False
     assert body["response_format"]["json_schema"]["strict"] is True
-    assert body["response_format"]["json_schema"]["schema"] == providers.evidence_schema([1])
+    schema = providers.evidence_schema([1], "translate")
+    schema["properties"]["limitations"]["pattern"] = r"^[\x09\x0a\x0d\x20-\x7e]*$"
+    assert body["response_format"]["json_schema"]["schema"] == schema
     assert "Never convert currencies" in body["messages"][0]["content"]
     assert "false ALWAYS means paragraphs=[]" in body["messages"][0]["content"]
     assert request.call_args.kwargs["timeout_seconds"] == 60
@@ -125,6 +138,15 @@ def test_missing_usage_and_optional_local_auth(local, settings):
         _, usage = providers.generate("explain", "a question", EVIDENCE)
     assert usage == {"input_tokens": None, "output_tokens": None}
     assert request.call_args.args[2]["Authorization"] == "Bearer synthetic-private-key"
+
+
+def test_task_language_instructions_do_not_mix_translation_into_english_tasks():
+    for mode in ("answer", "summarize", "explain"):
+        prompt = providers.instructions_for(mode)
+        assert "English only" in prompt and "25亿美元" not in prompt
+    prompt = providers.instructions_for("translate")
+    assert "25亿美元" in prompt and "1200万欧元" in prompt
+    assert "limitations in English only" in prompt
 
 
 @pytest.mark.django_db

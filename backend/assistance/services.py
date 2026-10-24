@@ -14,7 +14,7 @@ from .models import QuotaDay, ResultCache, UsageEvent
 from .providers import AssistanceError
 
 logger = logging.getLogger("assistance")
-PROMPT_VERSION = "m3-evidence-v2-money-and-empty"
+PROMPT_VERSION = "m3-evidence-v6-local-scope-language"
 
 
 def capabilities():
