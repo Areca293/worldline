@@ -135,7 +135,7 @@ def bounded_integer(name, default, maximum):
         raise ImproperlyConfigured(f"{name} must be an integer from 0 to {maximum}.") from None
 
 
-AI_USER_DAILY_LIMIT = bounded_integer("AI_USER_DAILY_LIMIT", "10", 100)
+AI_USER_DAILY_LIMIT = bounded_integer("AI_USER_DAILY_LIMIT", "100", 100)
 AI_GLOBAL_DAILY_LIMIT = bounded_integer("AI_GLOBAL_DAILY_LIMIT", "50", 1000)
 AI_MAX_OUTPUT_TOKENS = max(256, bounded_integer("AI_MAX_OUTPUT_TOKENS", "1200", 4096))
 LM_STUDIO_TIMEOUT_SECONDS = max(1, bounded_integer("LM_STUDIO_TIMEOUT_SECONDS", "60", 180))
