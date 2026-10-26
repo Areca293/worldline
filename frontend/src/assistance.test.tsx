@@ -89,7 +89,9 @@ it('keeps unconfigured research honest without sending a provider request', asyn
   expect(
     await screen.findByText(/Web research is not configured/),
   ).toBeVisible()
-  expect(screen.getByRole('button', { name: 'Search the web' })).toBeDisabled()
+  expect(
+    screen.queryByRole('button', { name: 'Search the web' }),
+  ).not.toBeInTheDocument()
   expect(fetcher.mock.calls.every(([, options]) => !options?.method)).toBe(true)
 })
 
@@ -231,15 +233,26 @@ it('does not offer processing for missing excerpts', async () => {
   mount(
     <ReadingAssistance
       article={
-        { id: 1, slug: 'empty', summary: '', is_sample: false } as Article
+        {
+          id: 1,
+          slug: 'empty',
+          summary: '   ',
+          original_url: 'https://example.com/story',
+          is_sample: false,
+        } as Article
       }
     />,
   )
   fireEvent.click(screen.getByText('Reading assistance'))
   expect(
-    await screen.findByText(/There is no source excerpt to process/),
+    await screen.findByText(/Reading assistance is unavailable for this story/),
   ).toBeVisible()
-  expect(screen.getByRole('button', { name: 'Process excerpt' })).toBeDisabled()
+  expect(
+    screen.queryByRole('button', { name: 'Process excerpt' }),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.getByRole('link', { name: /Open original article/ }),
+  ).toHaveAttribute('href', 'https://example.com/story')
 })
 
 it('shows quotation failure with retry instead of inventing a quote', async () => {

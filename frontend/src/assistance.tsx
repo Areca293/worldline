@@ -66,8 +66,13 @@ function errorMessage(error: Error) {
   return 'The request could not be completed. Check your connection and try again.'
 }
 
-function Availability({ kind }: { kind: 'web_search' | 'reading_help' }) {
-  const status = useCapabilities()
+function Availability({
+  kind,
+  status,
+}: {
+  kind: 'web_search' | 'reading_help'
+  status: ReturnType<typeof useCapabilities>
+}) {
   if (status.isPending)
     return <p role="status">Checking assistance availability…</p>
   if (status.isError)
@@ -81,11 +86,28 @@ function Availability({ kind }: { kind: 'web_search' | 'reading_help' }) {
     )
   if (!status.data[kind])
     return (
-      <p className="assistance-notice" role="status">
-        {kind === 'web_search'
-          ? 'Web research is not configured. Collected-story search is still available.'
-          : 'Reading assistance is not configured. The source excerpt remains available.'}
-      </p>
+      <div className="assistance-notice">
+        <p role="status">
+          {kind === 'web_search'
+            ? 'Web research is not configured. A Brave Search connection is required to retrieve web sources. The local language model cannot search the web on its own.'
+            : 'Reading assistance is not configured. A model connection must be enabled on the server before excerpts can be processed.'}
+        </p>
+        <p>
+          {kind === 'web_search'
+            ? 'Collected-story search is still available. After the search connection is configured, check availability again.'
+            : 'The saved source text remains available. After the model connection is configured, check availability again.'}
+        </p>
+        <button
+          type="button"
+          className="quiet-action"
+          disabled={status.isFetching}
+          onClick={() => void status.refetch()}
+        >
+          {status.isFetching
+            ? 'Checking availability…'
+            : 'Check availability again'}
+        </button>
+      </div>
     )
   return null
 }
@@ -244,7 +266,7 @@ function ResearchForm() {
         Explore public web results and inspect the evidence behind an English AI
         answer.
       </p>
-      <Availability kind="web_search" />
+      <Availability kind="web_search" status={status} />
       {!session.isPending && !session.data?.user && (
         <p>
           <Link className="text-link" to="/login?next=%2Fresearch">
@@ -253,50 +275,53 @@ function ResearchForm() {
           . Research requests use your daily allowance.
         </p>
       )}
-      <form
-        className="research-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          research.mutate({ query: query.trim(), window })
-        }}
-      >
-        <div className="research-input">
-          <label htmlFor="research-query">Research question</label>
-          <input
-            id="research-query"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="e.g. What changed in open-source AI this week?"
-            minLength={3}
-            maxLength={300}
-            required
-            aria-describedby="research-scope"
-          />
-        </div>
-        <div>
-          <label htmlFor="research-window">Page age</label>
-          <select
-            id="research-window"
-            value={window}
-            onChange={(event) => setWindow(event.target.value)}
-          >
-            <option value="day">Past 24 hours</option>
-            <option value="week">Past 7 days</option>
-            <option value="month">Past 31 days</option>
-            <option value="any">Any time</option>
-          </select>
-        </div>
-        <button
-          className="button"
-          disabled={
-            research.isPending ||
-            !session.data?.user ||
-            !status.data?.web_search
-          }
+      {status.isSuccess && status.data.web_search && session.data?.user && (
+        <form
+          className="research-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (!research.isPending)
+              research.mutate({ query: query.trim(), window })
+          }}
         >
-          {research.isPending ? 'Researching…' : 'Search the web'}
-        </button>
-      </form>
+          <div className="research-input">
+            <label htmlFor="research-query">Research question</label>
+            <input
+              id="research-query"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="e.g. What changed in open-source AI this week?"
+              minLength={3}
+              maxLength={300}
+              required
+              aria-describedby="research-scope"
+            />
+          </div>
+          <div>
+            <label htmlFor="research-window">Page age</label>
+            <select
+              id="research-window"
+              value={window}
+              onChange={(event) => setWindow(event.target.value)}
+            >
+              <option value="day">Past 24 hours</option>
+              <option value="week">Past 7 days</option>
+              <option value="month">Past 31 days</option>
+              <option value="any">Any time</option>
+            </select>
+          </div>
+          <button
+            className="button"
+            disabled={
+              research.isPending ||
+              !session.data?.user ||
+              !status.data?.web_search
+            }
+          >
+            {research.isPending ? 'Researching…' : 'Search the web'}
+          </button>
+        </form>
+      )}
       <p className="assistance-meta" id="research-scope">
         Brave searches outside Worldline. Page age may refer to a page update,
         not publication. Your question and returned snippets are sent to the
@@ -417,11 +442,26 @@ function ReadingForm({ article }: { article: Article }) {
         an English summary, a Chinese translation, or simpler English. Only the
         saved text is sent to the model, never an unavailable full article.
       </p>
-      <Availability kind="reading_help" />
-      {!article.summary && (
-        <p role="status">
-          There is no source excerpt to process. Open the original article.
-        </p>
+      {!article.summary.trim() ? (
+        <div className="assistance-notice">
+          <p role="status">Reading assistance is unavailable for this story.</p>
+          <p>
+            The source did not provide an excerpt. There is no saved text to
+            summarize, translate or explain. Worldline does not retrieve the
+            full article for reading assistance.
+          </p>
+          <a
+            className="text-link"
+            href={safeExternalUrl(article.original_url)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open original article <span aria-hidden="true">↗</span>
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        </div>
+      ) : (
+        <Availability kind="reading_help" status={status} />
       )}
       {!session.isPending && !session.data?.user && (
         <p>
@@ -434,36 +474,45 @@ function ReadingForm({ article }: { article: Article }) {
           .
         </p>
       )}
-      <form
-        className="reading-help-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          assist.mutate(mode)
-        }}
-      >
-        <label htmlFor="reading-mode">Reading task</label>
-        <select
-          id="reading-mode"
-          value={mode}
-          onChange={(event) => setMode(event.target.value)}
-        >
-          <option value="summarize">Summarize excerpt</option>
-          <option value="translate">Translate to Chinese</option>
-          <option value="explain">Explain in simple English</option>
-        </select>
-        <button
-          className="button"
-          disabled={
-            assist.isPending ||
-            !status.data?.reading_help ||
-            !session.data?.user ||
-            !article.summary
-          }
-        >
-          {assist.isPending ? 'Working on the excerpt…' : 'Process excerpt'}
-        </button>
-      </form>
-      <LimitNote allowance={status.data?.allowance ?? assist.data?.allowance} />
+      {article.summary.trim() &&
+        status.isSuccess &&
+        status.data.reading_help &&
+        session.data?.user && (
+          <form
+            className="reading-help-form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (!assist.isPending) assist.mutate(mode)
+            }}
+          >
+            <label htmlFor="reading-mode">Reading task</label>
+            <select
+              id="reading-mode"
+              value={mode}
+              onChange={(event) => setMode(event.target.value)}
+            >
+              <option value="summarize">Summarize excerpt</option>
+              <option value="translate">Translate to Chinese</option>
+              <option value="explain">Explain in simple English</option>
+            </select>
+            <button
+              className="button"
+              disabled={
+                assist.isPending ||
+                !status.data?.reading_help ||
+                !session.data?.user ||
+                !article.summary
+              }
+            >
+              {assist.isPending ? 'Working on the excerpt…' : 'Process excerpt'}
+            </button>
+          </form>
+        )}
+      {article.summary.trim() && (
+        <LimitNote
+          allowance={status.data?.allowance ?? assist.data?.allowance}
+        />
+      )}
       {assist.isPending && (
         <p role="status">Processing the saved source text…</p>
       )}

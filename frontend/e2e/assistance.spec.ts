@@ -53,7 +53,7 @@ test('unconfigured M3 keeps real reading and verified quotations available', asy
   await expect(page.getByText(/Web research is not configured/)).toBeVisible()
   await expect(
     page.getByRole('button', { name: 'Search the web' }),
-  ).toBeDisabled()
+  ).toHaveCount(0)
   for (const width of testInfo.project.name === 'desktop'
     ? [1440, 768]
     : [390, 320]) {
@@ -83,7 +83,7 @@ test('unconfigured M3 keeps real reading and verified quotations available', asy
   ).toBeVisible()
   await expect(
     page.getByRole('button', { name: 'Process excerpt' }),
-  ).toBeDisabled()
+  ).toHaveCount(0)
   await expect(
     page.getByText(
       'An original fixture used only in the disposable browser-test database.',
@@ -184,5 +184,111 @@ test('synthetic research response exercises citations, failures and responsive e
   await expect(page.getByText(/0 of 10 requests left today/)).toBeVisible()
   await expect(
     page.getByText('The preliminary fixture trial included 12 participants.'),
+  ).toHaveCount(0)
+})
+
+test('empty excerpts offer the original article instead of an unusable form', async ({
+  page,
+}) => {
+  // Explicit UI fixture; no normal article or account is changed.
+  await page.route('**/api/articles/browser-test-story/', async (route) => {
+    const response = await route.fetch()
+    await route.fulfill({
+      json: { ...(await response.json()), summary: '   ' },
+    })
+  })
+  let submitted = false
+  await page.route('**/api/ai/articles/**', (route) => {
+    submitted = true
+    return route.abort()
+  })
+  await page.goto('/articles/browser-test-story')
+  await page.getByText('Reading assistance', { exact: true }).click()
+  await expect(
+    page.getByText('Reading assistance is unavailable for this story.'),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Process excerpt' }),
+  ).toHaveCount(0)
+  await expect(page.getByLabel('Reading task')).toHaveCount(0)
+  await expect(
+    page.getByRole('link', { name: 'Open original article', exact: false }),
+  ).toHaveAttribute('href', 'https://example.com/story')
+  expect(submitted).toBe(false)
+})
+
+test('availability can recover from missing configuration and a failed status request', async ({
+  page,
+}) => {
+  await page.route('**/api/auth/session/', (route) =>
+    route.fulfill({
+      json: { user: { id: 999, username: 'UI-fixture' }, csrfToken: 'fixture' },
+    }),
+  )
+  let state = 'missing'
+  await page.route('**/api/ai/status/', (route) =>
+    state === 'error'
+      ? route.fulfill({ status: 503, json: { detail: 'Fixture unavailable' } })
+      : route.fulfill({
+          json: {
+            web_search: state === 'ready',
+            answers: false,
+            reading_help: state === 'ready',
+            allowance: null,
+          },
+        }),
+  )
+  await page.goto('/research')
+  await expect(
+    page.getByText(/A Brave Search connection is required/),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Search the web' }),
+  ).toHaveCount(0)
+  state = 'error'
+  await page.getByRole('button', { name: 'Check availability again' }).click()
+  await expect(page.getByRole('alert')).toContainText(
+    'Assistance status is unavailable',
+  )
+  state = 'ready'
+  await page.getByRole('button', { name: 'Retry status' }).click()
+  await expect(
+    page.getByRole('button', { name: 'Search the web' }),
+  ).toBeEnabled()
+  await expect(page.getByText(/AI answers are not configured/)).toBeVisible()
+  await page.goto('/articles/browser-test-story')
+  await page.getByText('Reading assistance', { exact: true }).click()
+  await expect(
+    page.getByRole('button', { name: 'Process excerpt' }),
+  ).toBeEnabled()
+})
+
+test('configured assistance directs anonymous readers to sign in', async ({
+  page,
+}) => {
+  await page.route('**/api/ai/status/', (route) =>
+    route.fulfill({
+      json: {
+        web_search: true,
+        answers: true,
+        reading_help: true,
+        allowance: null,
+      },
+    }),
+  )
+  await page.goto('/research')
+  await expect(
+    page.getByRole('link', { name: 'Sign in to research' }),
+  ).toHaveAttribute('href', '/login?next=%2Fresearch')
+  await expect(
+    page.getByRole('button', { name: 'Search the web' }),
+  ).toHaveCount(0)
+  await page.goto('/articles/browser-test-story')
+  await page.getByText('Reading assistance', { exact: true }).click()
+  await expect(
+    page.getByRole('link', { name: 'Sign in to use reading assistance' }),
+  ).toHaveAttribute('href', '/login?next=%2Farticles%2Fbrowser-test-story')
+  await expect(
+    page.getByRole('button', { name: 'Process excerpt' }),
   ).toHaveCount(0)
 })
