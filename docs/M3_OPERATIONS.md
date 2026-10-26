@@ -75,6 +75,28 @@ configuration. A stopped server produces a visible failure when a noncached task
 submitted; restart it and use **Try assistance again**. Cache hits can still work
 while it is stopped. No automatic retries or public exposure are enabled.
 
+## If an assistance action is unavailable
+
+- **No saved excerpt:** the article shows an explanation and **Open original article**
+  instead of a disabled task form. A title or a link is not an excerpt. Summarizing,
+  translating and simplifying work only on the saved source text; Worldline does not
+  fetch the full page as a fallback. Choose an article with a source excerpt or a
+  repository with a description.
+- **Web research not configured:** the local model is not a web search engine. Set
+  your existing Brave key in the root `.env` as `BRAVE_SEARCH_API_KEY`, preserving
+  other values. Restart Django, then use **Check availability again** on `/research`.
+  No OpenAI key is required when the local model is selected. Never enter keys into
+  the browser or chat. Configuration success does not verify provider credentials;
+  an actual research submission is needed to verify access.
+- **Reading assistance not configured:** check the local model settings above,
+  restart Django after configuration changes, and use **Check availability again**.
+- **Account/status could not be checked:** use **Retry account** or **Retry status**.
+  Anonymous readers get a sign-in link returning to the current page. Once the
+  account and configuration are available, the task form appears.
+- **A submitted request fails:** keep the real error visible. Restore the model or
+  search connection, then use the retry action. Do not reset quota counters to hide
+  failed attempts. A successful retry may consume another daily request.
+
 ## Use with assistance disabled
 
 Start the existing Django and Vite servers as described in the README. Apply
@@ -84,7 +106,7 @@ Start the existing Django and Vite servers as described in the README. Apply
 - `/research`: a separate **Web research** page, unconfigured without Brave. The usual
   **Search stories** still searches collected content, without any external service.
 - `/articles/:slug`: expand **Reading assistance**. Original excerpts remain readable;
-  processing is disabled until a local or remote model is configured. Demo stories are excluded.
+  the processing form appears once a local or remote model is configured and the reader signs in. Demo stories are excluded.
 - Home: five verified public-domain quotations rotate by UTC date, with author,
   work, chapter and original-edition link. No model or external daily fetch is used.
 
