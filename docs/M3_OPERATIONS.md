@@ -3,9 +3,11 @@
 Local implementation now supports **LM Studio** as well as OpenAI. The installed
 Spark model has been exercised through real API requests and the webpage; the small
 corpus and known wording limitations are recorded in [local acceptance](LOCAL_MODEL_ACCEPTANCE.md).
-**Live Brave research and paid-provider quality/cost remain unverified** because no
-keys are configured. Automated provider tests remain explicitly synthetic. Public
-deployment is outside this delivery.
+A user-provided Brave key was configured locally on 2026-10-26. One real browser
+research request returned five web sources and a cited answer from the local model
+in 15.409 seconds. This verifies connectivity, not broad answer quality or cost.
+Automated provider tests remain explicitly synthetic. Public deployment is outside
+this delivery.
 
 ## Daily startup on this Mac
 
@@ -56,10 +58,13 @@ response** and the citation against the saved source. Repeating the same task sh
 show **Cached result** with its original timestamp. Successful uncached requests and
 failed attempts count toward the existing allowance.
 
-The fourth function, evidence-based web answers, is under **Web research**. It still
-shows unconfigured because Brave access is missing. The local model's answer task
-was tested with explicitly supplied fixture evidence, not live web results. Do not
-interpret `reading_help: true` as search availability or a model health check.
+The fourth function, evidence-based web answers, is under **Web research**. On this
+Mac, Brave is now configured: sign in, enter a question, select a page-age range and
+choose **Search the web**. The page displays actual search snippets alongside the
+local model's cited answer. For the first live check, “What are Agent Skills in
+GitHub Copilot?” with **Any time** returned five sources. Inspect the snippets:
+valid citation IDs do not prove every interpretation is correct. Do not interpret
+`reading_help: true` as search availability or a model health check.
 
 The current Django server is **native macOS** and reaches the host's loopback directly.
 Inside a Docker API container, `127.0.0.1` would mean that container. The adapter also
@@ -70,7 +75,7 @@ the browser talks to Django, not directly to the model.
 
 For endpoint verification without credentials, use `curl http://127.0.0.1:1235/v1/models`
 and `curl http://127.0.0.1:5173/api/ai/status/`. The actual configured state is
-`web_search=false`, `answers=false`, `reading_help=true`. Availability only verifies
+`web_search=true`, `answers=true`, `reading_help=true`. Availability only verifies
 configuration. A stopped server produces a visible failure when a noncached task is
 submitted; restart it and use **Try assistance again**. Cache hits can still work
 while it is stopped. No automatic retries or public exposure are enabled.

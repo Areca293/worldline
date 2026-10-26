@@ -1,5 +1,26 @@
 # 实际进度
 
+## Brave 真实联网接入（2026-10-26 21:53 UTC）
+
+- 用户提供已有 Brave 密钥并授权配置、重载和真实搜索。仅更新根目录已忽略的 `.env`
+  对应字段，保留所有其他配置；密钥不写入 Git、文档、截图或运行输出。
+- 触发原生 Django 自动重载，确认后端仍只监听 127.0.0.1:8000；实际状态接口
+  web_search=true、answers=true、reading_help=true。本地模型参数未变。
+- 使用现有登录账号，从真实 `/research` 页面提交
+  `What are Agent Skills in GitHub Copilot?`，Page age=Any time。Brave 返回 **5 个真实来源**，
+  包括 GitHub Docs、Microsoft Learn、GitHub Copilot Learning Hub；本地 Spark 生成带引用
+  英文答案。不是 mock，也不是缓存结果。
+- 后端 UsageEvent：outcome=complete，search_calls=1，model_calls=1，耗时 **15.409 秒**，
+  模型 input/output tokens **1045/320**。本轮消耗 1 次用户额度，网页显示剩余 4/10；
+  不重设计数，不修改账号、文章或收藏。搜索缓存仍保持默认关闭。
+- 人工核对：核心定义与返回片段相符，来源链接和片段可见，缺少发布日期如实展示；
+  第三段使用 “in contrast” 概括两个相近定义，片段并未支持该对比，仍需人工判断。
+  此次确认配置、搜索、模型和网页链路通畅，不代表广泛事实准确性或稳定性验收。
+- Django system check、git diff --check 通过。无业务代码变更，未重复全量自动化；
+  前一阶段 18 项前端测试、构建、34 个浏览器场景的结果保留为独立历史记录。
+- 结果页保留供用户复核，截图 `/tmp/worldline-brave-live-search.png`。
+  更新运行说明以替换“当前未配置 Brave”的过时结论。未购买服务、push 或公开部署。
+
 ## 辅助功能按钮排查与状态修复（2026-10-26）
 
 - 起点 `9ef4d40`，工作区干净。实际接口 reading_help=true、web_search/answers=false，
