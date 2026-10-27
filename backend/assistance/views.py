@@ -21,12 +21,19 @@ class AssistanceThrottle(UserRateThrottle):
     scope = "assistance"
 
 
-class SearchInput(serializers.Serializer):
+class AssistanceInput(serializers.Serializer):
+    def validate(self, attrs):
+        if set(self.initial_data) - set(self.fields):
+            raise serializers.ValidationError("Unexpected input fields.")
+        return attrs
+
+
+class SearchInput(AssistanceInput):
     query = serializers.CharField(min_length=3, max_length=300)
     window = serializers.ChoiceField(choices=["any", "day", "week", "month"], default="week")
 
 
-class ReadingInput(serializers.Serializer):
+class ReadingInput(AssistanceInput):
     mode = serializers.ChoiceField(choices=["summarize", "translate", "explain"])
 
 

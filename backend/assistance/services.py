@@ -14,7 +14,7 @@ from .models import QuotaDay, ResultCache, UsageEvent
 from .providers import AssistanceError
 
 logger = logging.getLogger("assistance")
-PROMPT_VERSION = "m3-evidence-v6-local-scope-language"
+PROMPT_VERSION = "m3-evidence-v7-relay-strict"
 
 
 def capabilities():
@@ -115,6 +115,7 @@ def execute(user, operation, inputs, run, ttl):
             return {**payload, "cached": False, "allowance": allowance(user)}
         except AssistanceError as exc:
             outcome = exc.code
+            metrics.update(exc.tokens)
             raise
         finally:
             elapsed = int((time.monotonic() - started) * 1000)
@@ -166,6 +167,7 @@ def research(user, query, window):
         try:
             answer, tokens = providers.generate("answer", query, evidence)
         except AssistanceError as exc:
+            metrics.update(exc.tokens)
             return {**result, "answer_status": exc.code, "message": exc.message}
         metrics.update(tokens)
         return {

@@ -9,8 +9,11 @@ scheduled updates/retries, source status, keyword search, registration and priva
 Separate cited web research, excerpt summary/translation/simple English and attributed
 daily quotations are implemented. An optional LM Studio provider now runs reading
 assistance locally; real API and webpage checks are documented with quality limits.
-AI remains disabled by default in fresh installs. Live Brave research and paid-provider
-acceptance await keys. Production containers and CI are included. Public HTTPS
+An optional HTTPS relay adapter uses strict Chat Completions for the same four tasks;
+paid relay access, schema compatibility and quality are not yet verified.
+AI remains disabled by default in fresh installs. One live Brave research request with
+the local model is documented; broader evaluation remains pending. Production containers
+and CI are included. Public HTTPS
 deployment, physical iPhone Safari acceptance and iOS packaging remain pending.
 
 ## Architecture
@@ -23,7 +26,7 @@ Manual import command → the same audited import path
 
 Vite proxies `/api/` to Django on port 8000, preserving the browser's Host for
 same-origin CSRF checks. All data access goes through Django. Core reading needs no paid
-services; optional assistance uses a local LM Studio model or server-side OpenAI keys,
+services; optional assistance uses LM Studio, official OpenAI, or an allowlisted relay,
 and web research separately needs Brave. Production must also use a same-origin deployment;
 use `compose.production.yaml` for Caddy HTTPS, Gunicorn, workers and private data services.
 
@@ -194,6 +197,9 @@ not prove the model interpreted the evidence correctly. Real local-model checks 
 known terminology/quality limits are in [local acceptance](docs/LOCAL_MODEL_ACCEPTANCE.md).
 See [daily local startup and M3 setup](docs/M3_OPERATIONS.md)
 before configuring keys or enabling calls; web caching requires applicable storage rights.
+For relay activation, pending paid acceptance, branch roles and local rollback, see
+[Claude relay integration](docs/CLAUDE_RELAY.md). Keys belong only in the ignored root
+`.env`; changing a Git branch does not restore configuration, weights or database data.
 
 ## Sources and dates
 
