@@ -1,6 +1,22 @@
 # M3 local assistance: setup and acceptance
 
-Local implementation now supports **LM Studio** as well as OpenAI. The installed
+Local implementation supports **LM Studio**, official OpenAI, and an optional
+allowlisted **relay** Chat Completions adapter. Relay code is implemented but real
+access/schema/quality/cost acceptance is pending; see [relay setup and rollback](CLAUDE_RELAY.md).
+As of the latest 2026-10-27 check, the ignored local `.env` selects relay /
+`claude-sonnet-5` and contains a nonempty relay key. A fresh Django process reports
+all three capabilities enabled. Before the user's subsequent restart, the existing
+server on port 8000 reported `answers=false` and `reading_help=false`.
+After restart the reading form is available, but two submitted summaries failed
+answer validation; see the relay diagnostics below. Fully stop the original `runserver`
+with Ctrl+C and start it again from its terminal; refreshing the browser or
+reloading Python source is not a reliable way to reload `.env`. If the mismatch
+persists, check environment variables exported by that terminal or service:
+`load_dotenv` preserves existing process environment values, including empty ones.
+The user's subsequent diagnostic response confirms a billed model response, but
+that response violated the requested strict schema. The latest prompt improvements
+below have only synthetic contract-test coverage; live success remains unverified.
+The installed
 Spark model has been exercised through real API requests and the webpage; the small
 corpus and known wording limitations are recorded in [local acceptance](LOCAL_MODEL_ACCEPTANCE.md).
 A user-provided Brave key was configured locally on 2026-10-26. One real browser
@@ -9,9 +25,9 @@ in 15.409 seconds. This verifies connectivity, not broad answer quality or cost.
 Automated provider tests remain explicitly synthetic. Public deployment is outside
 this delivery.
 
-## Daily startup on this Mac
+## Local-model startup on this Mac (optional rollback)
 
-Keep Bionic (the installed LM Studio-compatible app) running with the existing
+When choosing `AI_MODEL_PROVIDER=lmstudio`, keep Bionic (the installed LM Studio-compatible app) running with the existing
 `spark-x2.6-4b` model loaded. Preserve the user's saved temperature 0.2, output cap
 1200 and thinking-off settings. No need to download another model. In a terminal:
 
@@ -36,7 +52,8 @@ cd /Users/a11/Desktop/worldline/frontend
 npm run dev
 ```
 
-The existing ignored `.env` has been updated only for local assistance:
+For local-model rollback, restore the following values in the ignored `.env`.
+The current selection is relay; the local settings and downloaded weights were preserved:
 
 ```dotenv
 AI_ENABLED=true
@@ -74,8 +91,10 @@ enabled; do not switch to `0.0.0.0` to work around it in this local setup. Keep 
 the browser talks to Django, not directly to the model.
 
 For endpoint verification without credentials, use `curl http://127.0.0.1:1235/v1/models`
-and `curl http://127.0.0.1:5173/api/ai/status/`. The actual configured state is
-`web_search=true`, `answers=true`, `reading_help=true`. Availability only verifies
+and `curl http://127.0.0.1:5173/api/ai/status/`. The verified local configuration on 2026-10-26 was
+`web_search=true`, `answers=true`, `reading_help=true`. With the current relay selection
+and a nonempty relay key, a fresh process reports all three capabilities enabled;
+the earlier server needed a complete restart to match. Availability only verifies
 configuration. A stopped server produces a visible failure when a noncached task is
 submitted; restart it and use **Try assistance again**. Cache hits can still work
 while it is stopped. No automatic retries or public exposure are enabled.
@@ -95,12 +114,137 @@ while it is stopped. No automatic retries or public exposure are enabled.
   an actual research submission is needed to verify access.
 - **Reading assistance not configured:** check the local model settings above,
   restart Django after configuration changes, and use **Check availability again**.
+- **Relay key filled but still unconfigured:** compare the running server's
+  `/api/ai/status/` with a fresh process loading the same root `.env`. On
+  2026-10-27 the running server returned `web_search=true`, `answers=false`,
+  `reading_help=false`, while the fresh process returned all three as true.
+  This failure occurs before a provider request, so it does not establish a bad
+  key, insufficient balance or unsupported model. Fully stop and restart the
+  original backend, then refresh status before attempting one real task.
 - **Account/status could not be checked:** use **Retry account** or **Retry status**.
   Anonymous readers get a sign-in link returning to the current page. Once the
   account and configuration are available, the task form appears.
 - **A submitted request fails:** keep the real error visible. Restore the model or
   search connection, then use the retry action. Do not reset quota counters to hide
   failed attempts. A successful retry may consume another daily request.
+
+### Relay response diagnostics
+
+`invalid_answer` means the response failed the local output contract. This includes
+JSON, field types, source IDs and usage shape; it is not a semantic fact-checking
+result. Provider usage or billing does not establish that its output is valid.
+
+On 2026-10-27 both inspected failed calls used the `claude性价比` group and their
+provider details reported a `system` parameter override enforcing a Windows GBK
+terminal and ASCII-only output. This conflicts with the application's instructions
+and Chinese translation. Those inspected details did not include answer text.
+Subsequently, the user supplied a real `debug_relay --send` result: finish_reason
+was stop, but content was a fenced JSON object with summary/limitations rather than
+evidence_sufficient/paragraphs/limitations and cited source_ids. It failed JSON parsing
+at position 0; even without fences the field structure would fail validation.
+This proves the observed call did not honor the strict output contract. It does not
+identify which layer ignored Schema, or prove the system override is the sole cause.
+No raw response is retained in this document.
+
+The project now repeats a complete Relay-only output contract in both system and
+user messages: exact fields/types, actual nonempty-evidence IDs, supported and
+insufficient-evidence shape examples, length bounds, language/task rules and an
+explicit ban on fences, preambles and extra fields. The serialized question and
+evidence remain untrusted data; example text is explicitly not evidence to copy.
+This reduces dependence on response_format enforcement and on the original system
+message surviving the relay. It cannot guarantee compliance with rewritten upstream
+instructions. response_format=json_schema and strict=true remain in every request.
+
+Translation prompts describe standard JSON Unicode escapes for ASCII-only output:
+one JSON decode must yield actual Simplified Chinese, with equivalent amounts
+(USD $12 million = 1200 万美元), original currency, negation and uncertainty retained.
+This is normal JSON string decoding, not a second unescaping pass or output repair.
+Double-escaped text and English substitutions are not evidence of successful Chinese
+translation; human language review remains required. The parser checks structure and
+IDs, not semantic entailment, language quality or exact translation completeness.
+
+There is no new permissive parser mode: fences, wrong summary fields, missing/invalid
+citations and damaged or partial JSON still fail. No normalization, citation filling,
+automatic retry, group/model switch or provider fallback was added. More prompt text
+may increase input tokens; Unicode escapes may use more output tokens. The existing
+1200-token cap remains unchanged, so truncation still fails rather than silently
+raising the limit. Relay cache configuration now includes prompt_version
+`relay-evidence-v2-explicit-contract`; old relay cache keys differ without clearing
+data. Official OpenAI and LM Studio prompts and cache fingerprints are unchanged
+by this particular update.
+
+New failures log only a static category in the Django terminal:
+
+```text
+model_response_rejected reason=invalid_json
+```
+
+| Reason | Meaning |
+| --- | --- |
+| `invalid_json` | Answer content cannot be parsed as JSON, including fenced JSON |
+| `answer_shape` | Top-level fields or types do not match the contract |
+| `evidence_consistency` | Evidence flag, paragraphs or limitations are inconsistent |
+| `paragraph_shape` | A paragraph is missing required text or source IDs |
+| `invalid_citations` | A source ID is not an allowed integer evidence ID |
+| `answer_length` | Answer text exceeds the existing length limits |
+| `invalid_usage` | Reported token usage is malformed |
+| `response_shape` | Provider message/choices envelope is malformed or unsupported |
+| `scope_language` | Local translation scope note fails its English/ASCII constraint |
+
+These warnings omit keys, questions, evidence, model output and raw provider errors.
+Earlier failures cannot be classified retrospectively because their bodies were
+not saved. Observe one deliberate request after loading the updated backend code;
+do not repeatedly retry or weaken validation without the actual failure category.
+
+### Inspect model presets and returned content locally
+
+Worldline already supplies system instructions and operation-specific prompts for
+all four tasks, plus temperature, output cap and a strict evidence JSON Schema.
+They are sent on every request; there is no separate model-training or dashboard
+preset step. A relay can still rewrite or ignore these parameters.
+
+From `backend`, preview the actual Chat Completions request body without sending:
+
+```sh
+uv run python manage.py debug_relay
+```
+
+To send exactly one diagnostic request with the selected relay configuration:
+
+```sh
+uv run python manage.py debug_relay --send
+```
+
+For the first post-change check, run that single summary request only. Look for
+finish_reason=stop and `Validation passed`, then inspect the returned object's three
+fields and each paragraph's integer source_ids (the diagnostic fixture uses ID 1).
+Check the synthetic excerpt's $12 million, 12 participants, preliminary results and
+the absence of established safety/effectiveness. Valid JSON and IDs alone do not
+prove factual support. A fence or summary field is still a genuine failure: stop
+and retain only the safe failure category/token counts, rather than repeatedly
+spending credits. Translation, simple-English and Brave Research remain separate
+later evaluations, not implicitly validated by a successful summary.
+
+The command starts its own process and reads the existing root `.env`; it does not
+need a web-server restart. Live diagnostics require the existing local DEBUG=true
+configuration and relay selection. Do not enable DEBUG on a production server.
+The input is a clearly labeled fictional research excerpt, not a database article.
+No search, database, account quota or cache is used; these calls do not appear in
+Worldline UsageEvent statistics, but can be billed and appear at the provider.
+
+Read the `RESPONSE` section: `content` is the returned message text, JSON-escaped
+for terminal safety and redacted for configured credentials. It is not repaired,
+stripped of Markdown or accepted automatically. A preview over 20,000 characters
+is explicitly marked truncated. `finish_reason`, reported model, token usage and
+JSON error location help distinguish plain prose, fenced JSON, extra explanations,
+truncation and empty content. Reasoning text and raw transport diagnostics are not
+printed. The same response validator used by the webpage runs after display and
+returns a nonzero exit on failure.
+
+Raw message content is visible only in this deliberate command, not in normal web
+logs or public API responses. Old response bodies were not stored and cannot be
+recovered with this command. Use the returned content to choose a targeted prompt
+or adapter change rather than assuming the relay preserves system/Schema settings.
 
 ## Use with assistance disabled
 
@@ -128,11 +272,11 @@ before enabling calls. This work does not create provider accounts or buy credit
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | `AI_ENABLED` | `false` | Master switch; set `true` to enable configured services |
-| `AI_MODEL_PROVIDER` | `openai` | `openai` or `lmstudio`; explicit provider, no silent fallback |
+| `AI_MODEL_PROVIDER` | `openai` | `openai`, `lmstudio` or `relay`; explicit provider, no silent fallback |
 | `BRAVE_SEARCH_API_KEY` | empty | Brave Web Search access |
 | `OPENAI_API_KEY` | empty | OpenAI Responses access |
 | `OPENAI_MODEL` | empty | Account-available model supporting Responses structured outputs |
-| `AI_USER_DAILY_LIMIT` | `10` | Admitted requests per reader, maximum 100 |
+| `AI_USER_DAILY_LIMIT` | `100` | Current branch code default, maximum 100; `.env.example` recommends 10 |
 | `AI_GLOBAL_DAILY_LIMIT` | `50` | Admitted requests across all readers, maximum 1,000 |
 | `AI_MAX_OUTPUT_TOKENS` | `1200` | Model output budget, bounded to 256–4,096 |
 | `AI_WEB_CACHE_SECONDS` | `0` | Web result cache disabled; maximum 3,600 seconds if storage rights permit |
@@ -141,11 +285,16 @@ before enabling calls. This work does not create provider accounts or buy credit
 | `LM_STUDIO_API_KEY` | empty | Optional local server token; never an OpenAI key requirement |
 | `LM_STUDIO_TIMEOUT_SECONDS` | `60` | Transport timeout, 1–180 seconds |
 | `LM_STUDIO_CONFIG_REVISION` | `1` | Bump after changing weights or saved inference defaults, including thinking |
+| `RELAY_BASE_URL` | `https://code.anyxml.com/v1` | Must include `/v1`; only this HTTPS host or `cncode.anyxml.com` |
+| `RELAY_API_KEY` | empty | Required relay credential; never reuse the local endpoint configuration |
+| `RELAY_MODEL` | `claude-sonnet-5` | Candidate routing name, not independent model-identity proof |
+| `RELAY_TIMEOUT_SECONDS` | `60` | Transport timeout, 1–180 seconds |
+| `RELAY_CONFIG_REVISION` | `1` | Bump when changing key group/routing without key rotation |
 
 Restart Django after changing settings. Model access and schema compatibility must
 be tested using your chosen account/model; the status API only checks that required
 configuration exists, **not** that credentials or billing work. Search-only setup is
-supported with a Brave key; remote reading needs an OpenAI key/model, while local
+supported with a Brave key; remote reading needs the selected OpenAI or relay key/model, while local
 reading needs a configured local server/model and no key unless local auth is enabled.
 `AI_ENABLED=false` disables both while retaining ordinary reading and quotations.
 
@@ -161,7 +310,8 @@ Research sends the submitted question to Brave and, when configured, that questi
 plus returned titles/URLs/snippets to the selected model provider. Reading assistance sends only saved
 source metadata and up to 8,000 characters of the excerpt/repository description.
 Local model requests stay on the configured local endpoint; choosing OpenAI sends
-them to OpenAI instead, without automatic fallback. Do not enter private information
+them to OpenAI instead; choosing relay sends them to the relay and its upstream,
+without automatic fallback. Do not enter private information
 in research. There is no arbitrary URL fetch,
 full-article scraping, model tool access or automatic background generation.
 
@@ -179,11 +329,13 @@ Human evidence checking remains necessary. A model failure preserves available w
 results; no evidence means no generated answer. Translation is Simplified Chinese;
 summary, simpler-English output and all controls/operational messages are English.
 
-External provider transport uses fixed HTTPS endpoints. Local transport accepts only
+External provider transport uses fixed or explicitly allowlisted HTTPS endpoints.
+Relay base paths are exactly `/v1` with one optional trailing slash and optional port 443.
+Local transport accepts only
 server-configured loopback hosts or the explicit Docker host gateway, a port and `/v1`;
 no userinfo, query, fragment or request-supplied target is accepted. No redirects or
 automatic retries are enabled. Connect timeout is at most 3 seconds; read/total timeout
-configuration is 30 seconds externally and 60 seconds locally (configurable up to 180),
+configuration is 30 seconds for Brave/OpenAI and 60 seconds for relay/local (configurable up to 180),
 with a 1 MB response cap. These are transport limits, not a hard
 end-to-end wall-clock deadline for both providers. Repeated manual retries can incur
 additional provider charges.
@@ -197,8 +349,8 @@ These request limits are **not a currency spending cap**. Configure provider-sid
 where available and inspect invoices.
 
 Reading results are cached for 24 hours, scoped to the authenticated user, source
-text/metadata, task, provider, model, endpoint, credentials, token limit, local timeout,
-local configuration revision and prompt version. Changing LM Studio settings outside
+text/metadata, task, provider, model, endpoint, credentials, token limit, relay/local timeout,
+configuration revision, output settings and prompt version. Changing LM Studio settings outside
 Worldline is not automatically detected; increment `LM_STUDIO_CONFIG_REVISION` and
 restart Django after such changes. Web caching is opt-in as
 above. Cache keys are HMACs; cached payloads contain source text and generated results
@@ -212,7 +364,9 @@ Provider policies still apply. LM Studio can retain its own debugging logs; Worl
 safe logging does not control the app's logging preferences. Application usage logs omit questions, excerpts,
 responses, credentials and raw provider diagnostics. They record operation, outcome,
 elapsed time, call counts and available input/output token counts. Missing token
-usage is unknown, never assumed to mean a free request.
+usage is unknown, never assumed to mean a free request. Chat Completions failures retain
+valid token counts when supplied, including truncated or invalid answers. Relay does
+not promise zero retention; its schema, routing and billing still require live acceptance.
 
 ## Local operations
 
@@ -242,7 +396,8 @@ Use one signed-in test reader, a small daily limit and a recorded UTC evaluation
 Do not change stored real articles to manufacture a desired result. For excerpt tasks,
 choose a collected item containing numbers and uncertainty and record its slug and
 exact source text for repeat comparisons. Only run after deciding to spend provider
-credits. The live web cases below remain pending Brave; the separate
+credits. One local-model Brave request was verified on 2026-10-26, but the broader web
+cases below and all relay calls remain pending; the separate
 [local acceptance record](LOCAL_MODEL_ACCEPTANCE.md) documents actual local reading,
 fixture evidence, errors and recovery already exercised, including failures.
 

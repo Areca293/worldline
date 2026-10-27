@@ -1,5 +1,204 @@
 # 实际进度
 
+## Relay 显式输出契约改进（2026-10-27，仅模拟验证通过）
+
+- 用户补充真实 `debug_relay --send` 证据：stop、正文是带 Markdown JSON 围栏的
+  summary/limitations 对象，缺 evidence_sufficient、paragraphs 及 source_ids；
+  诊断为 invalid_json，位置 0。即使删围栏仍不符合字段结构。已知平台日志显示 system
+  被覆盖为 GBK/ASCII 指令，但不能据此确认唯一根因或认定具体哪一层忽略 Schema。
+  此处仅记录用户提供的脱敏结论，不保存供应商原始正文，不冒充本轮亲自调用。
+- 开始时当前 feature/claude-relay、HEAD=bbcb094；保留已有 12 个未提交文件，
+  包括此前新建的 debug_relay 及测试。按“提示/测试 → 运维文档”两阶段推进，
+  没有恢复旧版本覆盖工作区，也没有修改 `.env`、Key、模型、分组或额度。
+- Relay system/user 消息均加入完整输出契约、正确字段类型、长度约束、动态允许的
+  非空证据整数 ID、合法/证据不足示例与明确禁止围栏/前后说明/额外字段。
+  四任务原始含义、任务语言、数字/否定/不确定性规则也出现在 user 消息中。
+  证据和问题仍仅作为 JSON 数据，不插入可信提示；示例注明不能用作事实依据。
+- Relay 翻译提示说明可用标准 JSON Unicode 转义兼容 ASCII 输出，解码一次后必须是
+  实际中文；USD $12 million=1200 万美元，limitations 仍要求英文。未增加二次解码、
+  围栏删除、结构转换、局部 JSON 截取或补引用。原有严格解析/引用/完成状态/长度/
+  用量校验及脱敏拒绝类别保持，response_format 与 strict=true 保留，无自动重试。
+- 新增 Relay 专用 prompt_version=relay-evidence-v2-explicit-contract 到既有配置
+  指纹；服务真实 HMAC 构造路径测试确认新旧 Relay key 不同，而 OpenAI/LM Studio
+  不变。该测试在获取数据库锁前停止，不是实际数据库缓存命中验收。
+  未改 services 的全局提示版本或清空缓存；官方/本地请求提示保持原样。
+- 调试工具沿用原实现，共享新请求构造；默认不联网、--send 单次调用、本机显式
+  调试才显示脱敏正文。新增回归确认 unfenced summary 也明确失败、正文不进普通日志，
+  四任务调试请求确实携带与网页相同的完整契约。没有把 raw 输出加入 API 或 Git。
+- 阶段 1：Relay/local/debug 非数据库 **153 passed、7 deselected**，官方 OpenAI
+  相关契约 **10 passed、22 deselected**，共 **163 passed**。新增 20 个回归用例，
+  包括两种围栏/错误字段层次、缺失/非法引用、证据不足状态、中文/Unicode 解码、
+  动态证据 ID、两角色四任务契约、缓存指纹及调试工具失败日志边界。
+  Django check、Ruff lint/format 通过。全部模型响应为 synthetic mock，非真实修复验收。
+- 阶段 2：实际本机配置运行默认 debug_relay 预览，确认新契约存在、网络函数零调用、
+  配置凭证不在输出；仅报告检查结论，没有输出完整预览。运行说明更新后
+  `git diff --check` 通过。`.env` 未修改，未执行任何 `--send`。
+- 阶段检查后尝试显式暂存相关后端/测试/配置文件，仍因 `.git/index.lock` 写权限
+  被拒绝而失败；**0 个 Commit、无新 Hash**，不绕过限制、不 push 或部署。
+  文档独立更新保留在工作区。无前端/数据库结构变更，本轮未重跑数据库、浏览器、
+  Redis/Celery 或前端套件，不能以历史结果称本轮全量通过。
+- 剩余：用户只运行一次 `uv run python manage.py debug_relay --send` 检查新摘要。
+  本轮不消耗中转余额。通过格式/引用后仍需人工核对事实；另外三任务、真实网页缓存、
+  平台路由和费用仍未验收。提示重复会增加输入 token，Unicode 转义可能增加输出 token，
+  输出上限仍是 1200；若再次失败应停止并保留脱敏类别，不自动重复收费请求。
+
+## 本机 Relay 返回正文调试工具（2026-10-27）
+
+- 用户希望直接调试模型并查看返回值。复核现有代码已有 system 与四任务提示词、
+  temperature=0.2、输出上限和 strict JSON Schema；这些随请求发送，不需先训练模型或
+  在中转站设置单独“预设”。本轮未调整提示词、模型、分组或 JSON/引用验收规则。
+- 新增 `uv run python manage.py debug_relay`：默认只预览脱敏请求和虚构测试片段，
+  不联网；显式 `--send` 才发出一次可能收费的请求，`--mode` 可选四类任务。
+  仅 relay 且现有本地 DEBUG=true 时允许发送，不修改 DEBUG/Key/其他设置。
+- 正文仅在该命令中显示：输出选定字段 content、finish_reason、model 标签、token，
+  JSON 解析位置；转义终端控制字符、隐藏配置凭证与 reasoning 文本。
+  不写普通网页日志或 API，不保存响应文件，不追回已丢弃的旧响应；长正文明确标记显示截断。
+- 请求构造和响应验证抽取为共用函数，调试命令复用网页的严格 Schema 与验证路径。
+  失败退出非零，不截取/修复/自动重试，不自动切组。测试片段不是数据库文章；
+  命令不连接数据库、不使用缓存、不记录 UsageEvent 或应用额度，供应商仍可计费。
+- 验证：新增命令测试 **15 passed**；合并 Relay/local 非数据库专项
+  **133 passed、7 deselected**；官方 OpenAI 共享校验专项 **10 passed**，合计
+  **143 passed**。覆盖默认不发送、四任务同请求体、失败正文可见、凭证/思考文本不泄漏、
+  终端控制转义、不满足配置时零请求、单次失败无重试。模型回复均为 synthetic mock。
+  实际本机配置执行默认预览成功，并断言所有配置凭证不在输出中；没有真实模型请求。
+  Django check、Ruff lint/format、git diff --check 通过；无前端改动，未跑数据库/浏览器套件。
+- 待用户在本机选择一次 `--send` 获取真实 content 后，再确定兼容修复；
+  当前尚未证明平台透传 Schema，也未宣称模型真实验收通过。未新增费用、公开部署、push 或 Commit。
+
+## Relay 响应校验失败排查与脱敏诊断（2026-10-27）
+
+- 用户已完整重启 Django；Chrome 实际文章页显示可操作的摘要表单、当天剩余 98/100，
+  错误变为 `invalid_answer` 对应的 “The answer could not be verified against its sources”。
+  当前已进入模型响应校验阶段，与上一轮的未配置提示不同。
+- 只读核对中转站两条 Worldline 调用日志：请求模型标签均为 `claude-sonnet-5`，
+  分组均为“claude性价比”，有输出 token 和费用记录。两条详情均显示参数覆盖：
+  平台设置 `system` 为 Windows GBK 终端 / 仅允许标准 ASCII 的指令。
+  这是供应商声明的参数覆盖，与项目阅读助手提示及中文翻译要求冲突；本轮未修改分组或平台设置。
+  日志未展示原始回答，不能断言这两次具体失败于 JSON、引用或其他字段。
+- 项目确实发送 `response_format=json_schema`、`strict=true`；平台是否透传/执行
+  Schema 尚未验证。现有 `invalid_answer` 统一覆盖格式、引用及用量结构错误，
+  不代表系统做过逐句事实/语义比对。不能把服务商计费成功当作输出契约通过。
+- 新增安全 warning：`model_response_rejected reason=<固定类别>`，区分 invalid_json、
+  answer_shape、evidence_consistency、paragraph_shape、invalid_citations、answer_length、
+  invalid_usage、response_shape、scope_language。原有英文 API 错误、严格校验、
+  无自动重试/回退/截取 JSON/补引用、失败 token 统计均保留。
+  不记录回答、问题、Key、供应商异常文本或完整响应；无迁移、依赖、提示或 `.env` 改动。
+- 验证：Relay + local 非数据库 **118 passed、7 deselected**；共享校验的官方 OpenAI
+  专项 **10 passed**，合计 **128 passed**。新增 10 项模拟诊断/日志隐私/失败 token
+  回归；Django check、Ruff lint/format、git diff --check 通过。
+  此为 synthetic mock 契约测试，尚未用新诊断取得真实失败类别或真实修复通过证据。
+- 本轮未触发网页提交、模型生成或 Brave 搜索，没有新增付费请求；没有重置额度、
+  修改账号/文章/收藏、运行全量数据库/前端/浏览器驱动或公开部署。此前的本机网络限制保留。
+- 下一步：核实/取消该中转路由的 system 覆盖，并确认完整透传 system 消息及 strict
+  JSON Schema；如需换分组，应先核对倍率。使用更新代码的一次摘要请求读取新诊断，
+  精确区分实际失败环节，再决定兼容方案；不得在未见正文或失败类别时声称已定位唯一根因。
+- 当前 `.git` 只读，本轮未创建 Commit 或 push；既有未提交实现保留。
+
+## Relay 不可用排查（2026-10-27，填 Key 后）
+
+- 先读取进度与项目上下文；当前仍为 `feature/claude-relay`，此前 10 个未提交
+  代码/测试/文档文件保留。本轮没有覆盖既有实现、修改 `.env`、切模型或重置额度。
+- 仅输出 Key 存在性，不输出内容：根 `.env` 的 Relay Key 已非空且无首尾空白；
+  AI 已启用，provider=relay、模型 `claude-sonnet-5`、实际端点
+  `https://code.anyxml.com/v1/chat/completions`、超时 60 秒、输出上限 1200。
+  新 Django 进程读取当前配置后，三项 capabilities 均为 true。
+- Chrome 实际访问正在运行的 `http://127.0.0.1:8000/api/ai/status/`，返回
+  web_search=true、answers=false、reading_help=false；真实文章页也显示
+  “Reading assistance is not configured”。这是运行服务与当前文件的配置不一致，
+  提示在供应商调用前产生；最可能尚未完整重启 Django，不能据此判断 Key 无效或余额不足。
+  `load_dotenv` 不覆盖继承的环境变量，若完整重启后仍不同，还需检查启动终端的导出变量。
+- 浏览器只读核对中转站模型广场，当前列出 `claude-sonnet-5`、OpenAI Chat 端点。
+  目录声明不等于当前 Key 的模型权限、实际模型身份或 strict Schema 支持验证。
+- 命令行访问本机状态接口受限（NewConnectionError），访问中转模型列表 DNS 失败
+  （NameResolutionError），业务用量查询受 PostgreSQL 连接限制（OperationalError）。
+  浏览器能访问本机和中转站，不能将上述工具环境限制归因于用户机器断网。
+  本轮没有成功发出模型生成请求，没有真实付费/余额/数据库/端到端验收。
+- 验证：Django check、Ruff lint/format、git diff --check 通过；
+  relay 非数据库契约 **82 passed、6 deselected**，
+  使用 synthetic mock，不代表真实服务可用。仅运维文档更新，无前端或业务代码改动，
+  不重复前端、浏览器驱动、全量数据库和 Redis 测试。
+- 下一步：用户在原后端终端 Ctrl+C 完整退出，再运行
+  `cd /Users/a11/Desktop/worldline/backend && uv run python manage.py runserver 127.0.0.1:8000`；
+  刷新状态确认 reading_help/answers，再进行一次真实摘要验证。
+  当前会话无法替代原终端完成服务重启，尚未宣称修复已生效。
+- 另发现公网部署待处理项：`compose.production.yaml` 的显式 environment 未传入 AI/Relay/Brave
+  变量，`--env-file` 只提供 Compose 插值，不能自动向容器注入这些未引用的变量；
+  Gunicorn timeout=45 秒，小于 Relay 默认 60 秒，Research 还需另计检索耗时。
+  这些不解释当前宿主机开发服务的提示，但部署前必须处理；本轮未公开部署或修改生产配置。
+- 本轮无 Commit、push 或公开发布；已有 `.git` 只读限制未绕过。
+
+## Relay Sonnet 5 配置与阶段提交尝试（2026-10-27）
+
+- 用户要求续做并按阶段立即提交，目标模型改为 `claude-sonnet-5`。开始时核对当前
+  分支仍为 `feature/claude-relay`、HEAD 为 `bbcb094`；上轮 10 个代码/测试/文档文件
+  的未提交改动完整保留，没有发现需覆盖的其他变更。
+- 原计划：阶段 1 复核适配器及测试并提交；阶段 2 准备 Sonnet 5 配置及文档并提交。
+  阶段 1 检查完成后显式 `git add` 相关文件，但创建 `.git/index.lock` 被当前会话
+  权限拒绝，未成功暂存，无法创建 Commit。没有绕过权限、伪报 Hash、重写历史或 push。
+  为完成用户已授权的独立配置工作，继续修改工作区；阶段提交节奏未能完成。
+- 根目录已忽略 `.env` 已按字段修改：`AI_ENABLED=true`、`AI_MODEL_PROVIDER=relay`、
+  `RELAY_BASE_URL=https://code.anyxml.com/v1`、`RELAY_MODEL=claude-sonnet-5`、
+  `RELAY_TIMEOUT_SECONDS=60`、revision=1，`RELAY_API_KEY` 留空待用户本机填写。
+  逐项验证无关字段保留；没有输出密钥，没有修改 Brave、本地模型、额度或数据库设置。
+- 源码默认模型、`.env.example` 和运行说明同步为 Sonnet 5。契约测试同时覆盖
+  Sonnet 4.6 / 5 的四任务请求；严格 Schema、安全端点和无自动回退行为不变。
+- 阶段 1 重跑 relay + local：**104 passed、7 errors**（PostgreSQL 初始化连接受限）。
+  阶段 2 relay 非数据库专项：**82 passed、6 deselected**；完整后端：
+  **153 passed、91 errors、2 deselected**，91 项仍被 PostgreSQL 访问权限阻止。
+  Ruff lint/format、Django check 通过；数据库全量验收仍未完成。
+- 实际加载 `.env` 确认 provider/model/端点正确，空 Key 时不会生成答案；用进程内
+  synthetic Key 与 mocked HTTP 验证只补 Key 即可构造 Sonnet 5 请求。
+  这是配置和 mock 契约验证，不是真实模型/数据库/浏览器验收。
+- 无前端改动，未重复上轮前端 18 项/构建；未重复 browser/Redis 集成测试。
+  没有真实付费请求，没有重启服务或停止 Bionic。当前有效次数限额仍为 100/50，
+  输出上限 1200，建议的 10/20 次没有擅自覆盖。填 Key 后需重启 Django。
+- `.git` 写权限限制导致本轮 **0 个 Commit**；代码/配置/测试与运维文档的两组精确
+  提交命令见 `CLAUDE_RELAY.md`。`.env` 本身不提交。待补齐数据库测试、真实 Key
+  分组/模型/Schema/费用验收，再由用户决定合并；归档/main 分支未改动。
+
+## Claude 中转适配器（2026-10-26，本轮实现完成，验收受限）
+
+- 开始时实际分支为 `feature/claude-relay`，工作区干净；feature 和
+  `archive/local-llm` 同为 `bbcb094`，`main` 为 `09aff1c`。所有本轮变更留在 feature
+  工作区，未提交、改写归档/main、merge、push、创建 PR 或公开部署。
+- 新增独立 `relay` 配置与 Chat Completions 适配，保留官方 OpenAI Responses 和
+  LM Studio。本地网络限制未放宽；relay 仅允许两个明确的 HTTPS anyxml 域名及 `/v1`，
+  统一生成端点，拒绝异常路径/用户信息/查询串/fragment，关闭重定向和自动重试。
+  API 额外配置字段明确返回 400，不能用客户端字段指定模型或目标地址。
+- 四种任务复用原有提示/证据/引用验证；非流式、严格 JSON Schema，无静默降级、
+  自动换组/模型/供应商、截取 JSON、移除思考或补引用。认证、限流、网络、拒答、
+  截断、空内容、非法 JSON/引用仍返回安全英文错误。Brave 仍独立负责真实搜索。
+- 缓存包含 provider、模型、规范化实际端点、输出设置、密钥、timeout/revision 和
+  v7 提示契约版本，仅保存 HMAC。Chat 失败若带合法 token 用量则保留到统计；
+  缺失用量仍为未知。登录/CSRF、原子额度、并发锁及现有业务数据流程保留，无迁移。
+- 只检查根 `.env` 的非敏感字段和密钥存在性，没有输出密钥，也没有修改 `.env`。
+  当前仍选 lmstudio，有 Brave Key，无 Relay Key。未重启/停止本地模型应用或删除权重。
+  实际用户/全局/输出限额为 **100/50/1200**（未在 `.env` 覆盖）；归档提交携带的
+  100 次默认值保留。建议 relay 初期显式设 **10/20/1200**，待用户决定；次数不是美元预算。
+- 浏览器只读核对当前中转模型广场：候选 `claude-sonnet-4-6`、OpenAI Chat 路径、
+  Bearer 及 `response_format` Schema 参数仍在，Response 端点数为 0；localhost:3000
+  仍是模板。分组/倍率与自动路由需按实际 Key 核对，不以模型或分组标签证明底层身份。
+  页面声明不等于调用成功；本轮**真实付费请求 0 次**，没有余额或收费验收。
+- relay 新增 **84** 个自动化用例：非数据库专项 **78 passed、6 deselected**；6 个
+  数据库用例覆盖缓存/额度、失败用量和 API 配置注入，但未能执行数据库断言。
+  首轮 relay + local 为 **95 passed、7 errors**；其中数据库建立连接时报
+  `Operation not permitted`，不是断言失败。测试 fixture 导入 lint 问题已修正。
+- 最终完整后端 `uv run pytest --tb=no -rN -q`：**149 passed、91 errors、2 deselected**，
+  91 项均在 PostgreSQL 连接/测试库初始化阶段受沙箱网络限制；因此**全量后端验收未通过**。
+  没有替换 SQLite/mock 数据库、重置数据或把历史通过结果当作本轮通过。
+  数据库套件顺序运行；未成功创建隔离测试库，正常业务数据库未做本轮成功读写核验。
+- 前端 **18 passed**、TypeScript/Vite 构建通过；Django system check（包括进程级
+  `AI_MODEL_PROVIDER=relay`）、Ruff lint/format、`git diff --check` 通过。
+  uv 默认缓存不可写，改用临时 `UV_CACHE_DIR=/tmp/worldline-uv-cache`。
+  未修改前端源码/浏览器布局/调度，本轮未重复 browser 或 Redis/Celery 验收。
+- 更新 `.env.example`、README、M3_OPERATIONS；新增 `CLAUDE_RELAY.md` 记录数据流、
+  配置、测试限制、预算提议、分支计划、提交/PR 文案及回退。分支不保存 `.env`、
+  权重、数据库；回退需要显式切配置、确认本地模型和端口、重启 Django。
+- 剩余：在允许连接本机 PostgreSQL 的环境补跑测试；用户在本机填写 Relay Key，
+  确认其分组/倍率与费用预算后，按最小 Schema、三项阅读、Brave/证据不足顺序验收，
+  核对 token/扣费/缓存，不重置额度或自动重试。建议最多 6 次模型、2 次检索、US$1，
+  这是待授权计划而非硬性预算保证；Schema 实际不支持时暂停并记录脱敏结论。
+
 ## Brave 真实联网接入（2026-10-26 21:53 UTC）
 
 - 用户提供已有 Brave 密钥并授权配置、重载和真实搜索。仅更新根目录已忽略的 `.env`
