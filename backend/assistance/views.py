@@ -8,11 +8,11 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
+from config.api import DatabaseErrorMixin
 from news.models import Article
-from news.views import DatabaseErrorMixin
 
 from . import services
-from .providers import AssistanceError
+from .providers.errors import AssistanceError
 from .quotes import quotation_for
 
 

@@ -5,7 +5,7 @@ import json
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from assistance import providers
+from assistance.providers import chat, configuration, errors, prompts, transport
 
 EVIDENCE = [
     {
@@ -70,17 +70,17 @@ class Command(BaseCommand):
         if options["send"] and not settings.DEBUG:
             raise CommandError("Live diagnostics require the existing local DEBUG=true setup.")
         try:
-            config = providers.model_configuration()
-        except providers.AssistanceError as exc:
+            config = configuration.model_configuration()
+        except errors.AssistanceError as exc:
             raise CommandError(exc.message) from None
         mode = options["mode"]
-        schema = providers.evidence_schema([1], mode)
+        schema = prompts.evidence_schema([1], mode)
         question = (
             "Summarize the supplied text."
             if mode == "answer"
             else "Process only the provided text."
         )
-        body = providers.chat_request_body(mode, question, EVIDENCE, schema, config)
+        body = chat.chat_request_body(mode, question, EVIDENCE, schema, config)
         self.stdout.write("REQUEST PREVIEW (synthetic evidence; no credentials)")
         self.show(
             {"endpoint": config["endpoint"], "key_present": bool(config["key"]), "body": body}
@@ -96,14 +96,14 @@ class Command(BaseCommand):
             "Sending one request. No retries, search, database usage, quota or cache writes."
         )
         try:
-            data = providers.request_json(
+            data = transport.request_json(
                 "POST",
                 config["endpoint"],
                 {"Authorization": f"Bearer {config['key']}", "Content-Type": "application/json"},
                 body,
                 timeout_seconds=config["timeout"],
             )
-        except providers.AssistanceError as exc:
+        except errors.AssistanceError as exc:
             raise CommandError(f"Transport failed: {exc.code}. {exc.message}") from None
         choices = data.get("choices")
         choice = (
@@ -150,8 +150,8 @@ class Command(BaseCommand):
                     }
                 )
         try:
-            providers.parse_chat_response(data, [1], operation=mode)
-        except providers.AssistanceError as exc:
+            chat.parse_chat_response(data, [1], operation=mode)
+        except errors.AssistanceError as exc:
             raise CommandError(
                 f"Validation failed: {exc.code}. See the response and diagnostic category."
             ) from None
