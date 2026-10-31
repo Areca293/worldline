@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { expect, it } from 'vitest'
-import type { Article } from './api'
-import { RepositoryStats } from './repositories'
+import type { Article } from './reading/types'
+import { RepositoryStats } from './reading/repositories'
 
 it.each([
   [null, false, 'Growth: collecting a full day of observations.'],

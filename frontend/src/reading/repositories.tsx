@@ -1,5 +1,5 @@
-import type { Article } from './api'
-import { timestampLabel } from './api'
+import type { Article } from './types'
+import { timestampLabel } from '../lib/presentation'
 
 export function RepositoryStats({
   article,
