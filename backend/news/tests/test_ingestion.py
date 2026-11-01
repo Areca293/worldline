@@ -5,7 +5,7 @@ from celery.exceptions import MaxRetriesExceededError, Retry
 from django.db import connection
 
 from news.catalog import FEEDS
-from news.feeds import FeedError
+from news.import_support import FeedError
 from news.ingestion import refresh_source
 from news.models import Article, FeedRun, Source, Topic
 from news.tasks import dispatch_feeds, update_source

@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from .catalog import GITHUB_COLLECTIONS
-from .feeds import MAX_FEED_BYTES, FeedError, ImportResult, plain_text
+from .import_support import MAX_FEED_BYTES, FeedError, ImportResult, plain_text
 from .models import Article, Repository, Source, StarObservation
 
 

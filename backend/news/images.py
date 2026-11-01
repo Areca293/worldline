@@ -2,6 +2,8 @@
 
 from urllib.parse import urlsplit
 
+from .import_support import plain_text
+
 # Exact publisher paths seen in the reviewed feeds. Shared CDNs are path-scoped.
 IMAGE_ORIGINS = {
     "https://blog.google/innovation-and-ai/technology/ai/rss/": {
@@ -39,8 +41,6 @@ def safe_image_url(value, feed_url):
 
 
 def feed_image(entry, source):
-    from .feeds import plain_text
-
     candidates = [m.get("url") for m in entry.get("media_thumbnail", [])]
     candidates += [
         m.get("url")

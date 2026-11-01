@@ -8,7 +8,8 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from news.catalog import GITHUB_COLLECTIONS
-from news.feeds import FeedError, import_feed
+from news.feeds import import_feed
+from news.import_support import FeedError
 from news.models import Article, Repository, Source, StarObservation, Topic
 from news.repositories import collection_url
 

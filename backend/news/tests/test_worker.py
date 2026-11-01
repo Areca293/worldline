@@ -12,7 +12,7 @@ from django.db import connections
 
 from config.celery import app
 from news.catalog import FEEDS
-from news.feeds import FeedError
+from news.import_support import FeedError
 from news.models import Article, FeedRun, Source, Topic
 from news.tests.test_feeds import item, rss
 
