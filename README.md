@@ -31,13 +31,22 @@ and web research separately needs Brave. Production must also use a same-origin 
 use `compose.production.yaml` for Caddy HTTPS, Gunicorn, workers and private data services.
 
 ```text
-frontend/src/App.tsx          Reading pages and topic navigation
-frontend/src/account.tsx      Registration, sign-in and bookmark controls
-frontend/src/api.ts           Typed API calls and CSRF-protected writes
-frontend/src/assistance.tsx    Web research, excerpt help and daily quotations
-backend/assistance/           Bounded providers, evidence, private cache and quotas
+frontend/src/App.tsx          Application composition and routes
+frontend/src/app/             Layout, scroll restoration and offline notice
+frontend/src/reading/         Reading pages, cards, search and pagination
+frontend/src/account/         Session, account cache clearing and authentication
+frontend/src/bookmarks/       Private saved stories and bookmark controls
+frontend/src/assistance/      Explicit research and excerpt-help requests and results
+frontend/src/quotes/          Public attributed daily quotation
+frontend/src/sources/         API/database connection and source update status
+frontend/src/lib/             HTTP/CSRF and date/link presentation helpers
+backend/assistance/services.py Private cache, locks, quotas and usage orchestration
+backend/assistance/providers/ Protocol adapters, prompts, transport and strict validation
+backend/config/api.py        Shared safe database/cache API error handling
 backend/news/models.py       Reading data, repositories and star observations
+backend/news/queries.py      Reader-scoped discovery and bookmark selection
 backend/news/feeds.py        Bounded download, parse and idempotent import
+backend/news/import_support.py Shared import limits, outcomes and excerpt cleaning
 backend/news/catalog.py      Reviewed source allowlist and usage notes
 backend/news/repositories.py Validated GitHub metadata and measured star change
 backend/news/ingestion.py    Audited attempts and per-source overlap protection
@@ -50,6 +59,8 @@ compose.yaml                 Local PostgreSQL and Redis
 compose.production.yaml      Prepared production stack (not deployed)
 .github/workflows/ci.yml      Automated verification
 ```
+
+See the [module guide](docs/ARCHITECTURE.md) for business flows and dependency rules.
 
 ## Prerequisites
 
