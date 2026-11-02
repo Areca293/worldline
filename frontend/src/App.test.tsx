@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import App from './App'
-import { publishedLabel, safeExternalUrl } from './api'
+import { publishedLabel, safeExternalUrl } from './lib/presentation'
 
 afterEach(() => vi.unstubAllGlobals())
 function mount(path = '/') {

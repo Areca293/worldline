@@ -3,9 +3,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
-import { DailyQuote, ReadingAssistance, Research } from './assistance'
-import type { AssistanceResult } from './assistance'
-import type { Article } from './api'
+import { DailyQuote } from './quotes/DailyQuote'
+import { ReadingAssistance } from './assistance/ReadingAssistance'
+import { Research } from './assistance/Research'
+import type { AssistanceResult } from './assistance/types'
+import type { Article } from './reading/types'
 
 afterEach(() => vi.unstubAllGlobals())
 const allowance = { remaining: 9, daily_limit: 10, resets: '00:00 UTC' }
@@ -261,4 +263,71 @@ it('shows quotation failure with retry instead of inventing a quote', async () =
   expect(
     await screen.findByRole('button', { name: 'Retry quotation' }),
   ).toBeVisible()
+})
+
+it('resets reading mode and answers on article and account changes', async () => {
+  server({ reply: { ...result, mode: 'translate' } })
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  const article = {
+    id: 1,
+    slug: 'first',
+    summary: 'Original excerpt.',
+    is_sample: false,
+  } as Article
+  const view = (item: Article) => (
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ReadingAssistance article={item} />
+      </MemoryRouter>
+    </QueryClientProvider>
+  )
+  const { rerender } = render(view(article))
+  fireEvent.click(screen.getByText('Reading assistance'))
+  fireEvent.change(await screen.findByLabelText('Reading task'), {
+    target: { value: 'translate' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Process excerpt' }))
+  await screen.findByText('The trial included 12 people.')
+  rerender(view({ ...article, id: 2, slug: 'second' }))
+  expect(await screen.findByLabelText('Reading task')).toHaveValue('summarize')
+  expect(
+    screen.queryByText('The trial included 12 people.'),
+  ).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Process excerpt' }))
+  await screen.findByText('The trial included 12 people.')
+  act(() =>
+    client.setQueryData(['session'], {
+      user: { id: 2, username: 'other' },
+      csrfToken: 'other',
+    }),
+  )
+  await waitFor(() =>
+    expect(
+      screen.queryByText('The trial included 12 people.'),
+    ).not.toBeInTheDocument(),
+  )
+  expect(await screen.findByLabelText('Reading task')).toHaveValue('summarize')
+})
+
+it('hides an earlier answer after failure, does not auto-retry and refreshes allowance', async () => {
+  server()
+  mount()
+  await submit()
+  await screen.findByText('The trial included 12 people.')
+  const failed = server({ status: 503 })
+  await submit()
+  await screen.findByRole('alert')
+  expect(
+    screen.queryByText('The trial included 12 people.'),
+  ).not.toBeInTheDocument()
+  await waitFor(() =>
+    expect(failed.mock.calls.some(([url]) => url.includes('ai/status'))).toBe(
+      true,
+    ),
+  )
+  expect(
+    failed.mock.calls.filter(([, options]) => options?.method === 'POST'),
+  ).toHaveLength(1)
 })

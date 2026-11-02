@@ -178,7 +178,7 @@ http://127.0.0.1:8000/admin/ 的 Users 中创建非 staff 的普通账号。已�
 
 ## 一个可以自己做的小修改
 
-在 `frontend/src/account.tsx` 中找到 `Save story`，改成你喜欢的英文按钮文案。
+在 `frontend/src/bookmarks/BookmarkButton.tsx` 中找到 `Save story`，改成你喜欢的英文按钮文案。
 保存后观察页面，再解释：为什么改文案不影响数据库收藏？哪些前端/浏览器测试也需要同步调整？
 
 下一步尝试在 `frontend/src/styles.css` 中修改 `--accent` 的颜色。修改后运行

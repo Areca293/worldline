@@ -5,7 +5,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 from django.db import DatabaseError
 
-from .feeds import FeedError
+from .import_support import FeedError
 from .ingestion import refresh_source
 from .models import Source
 

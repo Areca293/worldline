@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from .views import DatabaseErrorMixin
+from config.api import DatabaseErrorMixin
 
 
 def session_data(request):

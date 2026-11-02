@@ -8,13 +8,13 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from assistance import providers
 from assistance.management.commands.debug_relay import EVIDENCE
+from assistance.providers import chat, configuration, errors, prompts
 from assistance.tests.test_local_provider import reply
 
 
 @pytest.fixture(autouse=True)
-def configuration(settings):
+def relay_settings(settings):
     settings.DEBUG = True
     settings.AI_ENABLED = True
     settings.AI_MODEL_PROVIDER = "relay"
@@ -29,7 +29,7 @@ def configuration(settings):
 
 def test_preview_does_not_send_or_access_database():
     output = StringIO()
-    with patch("assistance.providers.request_json") as request:
+    with patch("assistance.providers.transport.request_json") as request:
         call_command("debug_relay", stdout=output)
     request.assert_not_called()
     text = output.getvalue()
@@ -41,7 +41,7 @@ def test_preview_does_not_send_or_access_database():
 @pytest.mark.parametrize("mode", ["summarize", "translate", "explain", "answer"])
 def test_live_diagnostic_uses_identical_body_and_validation_once(mode):
     output = StringIO()
-    with patch("assistance.providers.request_json", return_value=reply()) as request:
+    with patch("assistance.providers.transport.request_json", return_value=reply()) as request:
         call_command("debug_relay", send=True, mode=mode, stdout=output)
     request.assert_called_once()
     method, endpoint, headers, body = request.call_args.args
@@ -50,18 +50,18 @@ def test_live_diagnostic_uses_identical_body_and_validation_once(mode):
     question = (
         "Summarize the supplied text." if mode == "answer" else "Process only the provided text."
     )
-    assert body == providers.chat_request_body(
+    assert body == chat.chat_request_body(
         mode,
         question,
         EVIDENCE,
-        providers.evidence_schema([1], mode),
-        providers.model_configuration(),
+        prompts.evidence_schema([1], mode),
+        configuration.model_configuration(),
     )
     for message in body["messages"]:
         assert "OUTPUT CONTRACT" in message["content"]
         assert "Supported-output shape example:" in message["content"]
         assert "source_ids: a nonempty array of integer IDs" in message["content"]
-        assert providers.instructions_for(mode) in message["content"]
+        assert prompts.instructions_for(mode) in message["content"]
     assert "Validation passed" in output.getvalue()
     assert "private-" not in output.getvalue()
 
@@ -70,7 +70,7 @@ def test_live_diagnostic_uses_identical_body_and_validation_once(mode):
 def test_invalid_content_visible_without_repair_retry_or_reasoning(content, caplog):
     output = StringIO()
     with patch(
-        "assistance.providers.request_json",
+        "assistance.providers.transport.request_json",
         return_value=reply(content=content, reasoning_content="private-reasoning"),
     ) as request:
         with pytest.raises(CommandError, match="Validation failed: invalid_answer"):
@@ -85,7 +85,7 @@ def test_invalid_content_visible_without_repair_retry_or_reasoning(content, capl
 def test_echoed_credentials_and_terminal_controls_are_not_exposed():
     output = StringIO()
     content = "private-relay-key private-openai-key private-brave-key private-local-key private-django-key\x1b[31m"
-    with patch("assistance.providers.request_json", return_value=reply(content=content)):
+    with patch("assistance.providers.transport.request_json", return_value=reply(content=content)):
         with pytest.raises(CommandError):
             call_command("debug_relay", send=True, stdout=output)
     text = output.getvalue()
@@ -96,7 +96,9 @@ def test_echoed_credentials_and_terminal_controls_are_not_exposed():
 def test_unfenced_summary_shape_is_visible_but_rejected_once(caplog):
     output = StringIO()
     content = json.dumps({"summary": "Synthetic incorrect shape.", "limitations": "Excerpt only."})
-    with patch("assistance.providers.request_json", return_value=reply(content=content)) as request:
+    with patch(
+        "assistance.providers.transport.request_json", return_value=reply(content=content)
+    ) as request:
         with pytest.raises(CommandError, match="Validation failed: invalid_answer"):
             call_command("debug_relay", send=True, stdout=output)
     request.assert_called_once()
@@ -118,7 +120,7 @@ def test_unfenced_summary_shape_is_visible_but_rejected_once(caplog):
 )
 def test_disallowed_configuration_never_sends(settings, field, value):
     setattr(settings, field, value)
-    with patch("assistance.providers.request_json") as request:
+    with patch("assistance.providers.transport.request_json") as request:
         with pytest.raises(CommandError):
             call_command("debug_relay", send=True, stdout=StringIO())
     request.assert_not_called()
@@ -127,8 +129,8 @@ def test_disallowed_configuration_never_sends(settings, field, value):
 def test_transport_error_does_not_expose_raw_diagnostics_or_retry():
     output = StringIO()
     with patch(
-        "assistance.providers.request_json",
-        side_effect=providers.AssistanceError("provider_access", "Provider access is unavailable."),
+        "assistance.providers.transport.request_json",
+        side_effect=errors.AssistanceError("provider_access", "Provider access is unavailable."),
     ) as request:
         with pytest.raises(CommandError, match="Transport failed: provider_access"):
             call_command("debug_relay", send=True, stdout=output)

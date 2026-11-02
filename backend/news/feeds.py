@@ -5,9 +5,7 @@ import hashlib
 import ipaddress
 import socket
 import time
-from dataclasses import dataclass
 from datetime import datetime, timezone
-from html.parser import HTMLParser
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from xml.etree.ElementTree import ParseError
 
@@ -20,44 +18,11 @@ from django.db.models import Q
 
 from .catalog import APPROVED_FEED_URLS, GITHUB_COLLECTIONS
 from .images import feed_image
+from .import_support import MAX_FEED_BYTES, FeedError, ImportResult, plain_text
 from .models import Article, Source
+from .repositories import collection_url, import_repositories
 
-MAX_FEED_BYTES = 2 * 1024 * 1024
 MAX_ENTRIES = 100
-
-
-class FeedError(ValueError):
-    """Safe, bounded error text suitable for operator output."""
-
-
-class TextExtractor(HTMLParser):
-    def __init__(self):
-        super().__init__(convert_charrefs=True)
-        self.parts = []
-        self.hidden = 0
-
-    def handle_starttag(self, tag, attrs):
-        if tag in {"script", "style"}:
-            self.hidden += 1
-        elif not self.hidden:
-            self.parts.append(" ")
-
-    def handle_endtag(self, tag):
-        if tag in {"script", "style"}:
-            self.hidden = max(0, self.hidden - 1)
-        elif not self.hidden:
-            self.parts.append(" ")
-
-    def handle_data(self, data):
-        if not self.hidden:
-            self.parts.append(data)
-
-
-def plain_text(value, limit):
-    parser = TextExtractor()
-    parser.feed(str(value or ""))
-    text = " ".join("".join(parser.parts).split()).replace("\x00", "")
-    return text if len(text) <= limit else text[: limit - 1].rsplit(" ", 1)[0] + "…"
 
 
 def canonical_url(value):
@@ -107,8 +72,6 @@ def fetch_feed(url):
         raise FeedError("Feed URL is not on the reviewed allowlist.")
     github = url in GITHUB_COLLECTIONS
     if github:
-        from .repositories import collection_url
-
         url = collection_url(url)
     host = urlsplit(url).hostname
     try:
@@ -173,14 +136,6 @@ def parsed_date(entry, key):
         return None
 
 
-@dataclass
-class ImportResult:
-    created: int = 0
-    updated: int = 0
-    unchanged: int = 0
-    skipped: int = 0
-
-
 def parse_entries(data):
     if len(data) > MAX_FEED_BYTES:
         raise FeedError("Feed exceeds the 2 MiB limit.")
@@ -209,8 +164,6 @@ def parse_entries(data):
 
 def import_feed(source, data):
     if source.feed_url in GITHUB_COLLECTIONS:
-        from .repositories import import_repositories
-
         return import_repositories(source, data)
     entries = parse_entries(data)
     result = ImportResult()

@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import DatabaseError
 
-from news.feeds import FeedError
+from news.import_support import FeedError
 from news.ingestion import refresh_source
 from news.models import Source
 

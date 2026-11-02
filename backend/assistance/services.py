@@ -11,14 +11,15 @@ from django.utils.crypto import salted_hmac
 
 from . import providers
 from .models import QuotaDay, ResultCache, UsageEvent
-from .providers import AssistanceError
+from .providers import brave, configuration, evidence
+from .providers.errors import AssistanceError
 
 logger = logging.getLogger("assistance")
 PROMPT_VERSION = "m3-evidence-v7-relay-strict"
 
 
 def capabilities():
-    model = bool(settings.AI_ENABLED and providers.model_configured())
+    model = bool(settings.AI_ENABLED and configuration.model_configured())
     search = bool(settings.AI_ENABLED and settings.BRAVE_SEARCH_API_KEY)
     return {"web_search": search, "answers": search and model, "reading_help": model}
 
@@ -78,7 +79,7 @@ def execute(user, operation, inputs, run, ttl):
                 PROMPT_VERSION,
                 operation,
                 inputs,
-                providers.model_configuration(),
+                configuration.model_configuration(),
                 settings.BRAVE_SEARCH_API_KEY,
                 ttl,
             ],
@@ -143,7 +144,7 @@ def research(user, query, window):
 
     def run(metrics):
         metrics["search_calls"] = 1
-        evidence = providers.search_web(query, window)
+        evidence = brave.search_web(query, window)
         result = {
             "sources": evidence,
             "retrieved_at": timezone.now().isoformat(),
@@ -195,7 +196,7 @@ def reading_help(user, article, mode):
             "Reading assistance is available for collected content, not demo stories.",
             400,
         )
-    text = providers.plain(article.summary, 8000)
+    text = evidence.plain(article.summary, 8000)
     if not text:
         raise AssistanceError(
             "no_text", "This source provided no excerpt to process. Open the original article.", 422
@@ -203,7 +204,7 @@ def reading_help(user, article, mode):
     source = {
         "id": 1,
         "title": article.title,
-        "url": providers.public_url(article.original_url),
+        "url": evidence.public_url(article.original_url),
         "publisher": article.source.name,
         "text": text,
         "kind": "repository_description" if hasattr(article, "repository") else "feed_excerpt",

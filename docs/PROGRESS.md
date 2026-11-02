@@ -1,5 +1,75 @@
 # 实际进度
 
+## 重构阶段提交恢复完成（2026-11-01）
+
+- 用户要求重试 Git 权限后，普通沙箱写 .git/refs 仍失败；通过正式 require_escalated
+  授权已成功创建 `refactor/modularize-frontend-backend`，并能暂存与提交。未绕过权限。
+- 恢复时核实 HEAD=`bd0274d`：前端 `a183b57` 和 AI `bd0274d` 已提交；新闻 15 个文件
+  已暂存。保留这些状态，从中断位置续做，没有重新创建分支或重复前两个提交。
+- 新闻阶段完成为 `9635dd7`（refactor(news): clarify query and ingestion dependencies）。
+  README、架构说明、入门指南、进度和交付记录随本次文档提交保存；完整 Hash 以 git log 为准。
+- 本次重新执行：前端 npm test **41 passed**、npm run build 通过；后端 manage.py check、
+  Ruff lint/format（85 文件）通过，真实隔离 PostgreSQL 默认套件 **307 passed、2 deselected**。
+  git diff --check / 暂存 diff 检查通过。供应商测试禁止真实 HTTP，没有收费调用。
+  无业务源码新增修改，未重复浏览器、Redis/Celery、迁移及 Docker 验证；此前通过记录保留在下方。
+- 恢复时另发现 `docs/CONTENT_EXPANSION.md`、`docs/M2_PLAN.md`、`docs/M3_PLAN.md` 的
+  未暂存删除，不属于本次重构提交分组。按用户要求保留原状态，不恢复、不暂存、不提交。
+  因此任务文件提交完成后，工作区仍有这三项独立删除，不能称整个工作区干净。
+- 四阶段提交均在专用分支；main 保持 `9b513dc`。未 push、创建远端 PR、合并或部署。
+
+
+## 前后端业务边界重构（2026-10-31，代码验证完成，Git 写入受限）
+
+- 开始时重新核实：工作区干净、`main`、HEAD=`9b513dc`，无子目录补充 AGENTS。
+  先读进度/上下文、源码、CI、内容源及 M2/M3/Relay 运维说明；历史状态未覆盖本轮证据。
+- 前端按 app、reading、account、bookmarks、assistance、quotes、sources、lib、ui 组织。
+  App 只组合原路由与布局；文章卡片/元信息、分页/搜索/Star 控件复用原实现。
+  收藏从认证模块移出；登录/注册共用相同 safeNextPath 规则；AI 两类显式 Mutation
+  共用不重试、gcTime=0、结束刷新额度策略。名句独立于普通 AI 与账号状态。
+- 保留原 query keys、账号切换先 cancel/remove 私人查询再更新 Session、Research 按账号、
+  Reading Help 按账号/文章 ID 重挂载、失败时隐藏旧答案。main.tsx、三个 CSS 文件内容、
+  QueryClient/Router 生命周期不变；构建 CSS 哈希与基线一致。未重新设计界面或升级依赖。
+- 后端 providers 拆为配置、HTTP、Brave、提示/Schema、证据/严格校验、Chat 和 Responses；
+  generate 只做调度。debug_relay 继续共用真实网页请求构造/校验，无旧路径兼容转发。
+  20 个搬迁定义经 AST 对比除导入限定名外一致，12 个三供应商/四任务完整请求与配置摘要
+  均与重构前相同；prompt version、HMAC 输入、错误类别、token 和日志语义不变。
+- services 只更换依赖路径，保留锁/连接、全局后用户额度锁定顺序、用户隔离缓存及 UsageEvent。
+  news 查询移到 queries，保留近似标志、筛选/排序/分页；DatabaseErrorMixin 移到 config/api。
+  import_support 承载 RSS/GitHub/图片署名的共享文本规则与导入类型，消除 feeds 与 repositories/
+  images 的反向局部导入。Feed allowlist、安全下载/XML、幂等身份与任务名均保留。
+  模型、历史迁移、设置、依赖锁文件和 .env 均未改动。
+- 清理仅限迁移后无调用方的旧前端承载文件、旧 providers.py、重复 next 校验与 Mutation
+  策略及无用 import。未删动态注册对象、安全分支、受支持 provider、原测试或历史资料。
+  具体调用关系、删除依据、扩展规则见 ARCHITECTURE.md / REFACTOR_REVIEW.md。
+- 本轮基线：前端 **18 passed**、build 通过；授权执行后后端 **289 passed、2 deselected**，
+  Chrome **1 passed、290 deselected**（34 场景）；Redis/Celery **1 passed、290 deselected**。
+  首次沙箱默认后端为 198 passed / 91 PostgreSQL 初始化 errors，browser/integration 也因
+  localhost 权限失败；通过正常 require_escalated 授权后成功，未用 SQLite/mock DB 代替。
+  uv 使用允许写入的 `UV_CACHE_DIR=/tmp/worldline-uv-cache`，未修改用户全局配置。
+- 阶段验证：前端 **41 passed**、build/浏览器通过；AI 专项 **207 passed**；新闻专项
+  **94 passed、2 deselected**。开发中提取函数引用和测试模块名称冲突已被原测试捕获并修正，
+  没有降低断言。新增 provider HTTP 自动防护 fixture，未 mock 的请求立即使测试失败。
+- 最终验证：前端 **41 passed**（5 文件）、TypeScript/Vite build、改动前端文件 Prettier
+  通过；后端 **307 passed、2 deselected**，Django check、迁移检查 No changes detected、
+  Ruff lint/format（85 文件）全部通过；Chrome **1 passed、308 deselected**，内部 **34 个
+  桌面/手机场景**；真实 Redis/Celery **1 passed、308 deselected**。数据库套件顺序执行。
+  CI 的 Docker web target 在本机成功构建（未启动/部署容器）；git diff --check 通过。
+- 新增边界回归包括安全 next、账号切换取消在途私人查询、Reading Help 跨文章/账号重置、
+  AI 失败隐藏旧答案/刷新额度/不重试、完整 provider 请求/config 指纹、三个 API 面的 DB/Redis
+  安全 503。既有浏览器覆盖 URL/刷新/分页/All、CSRF/管理会话、图片失败、键盘和 reduced-motion。
+  目视复核本轮首页与 Research 截图；测试内容均明确 fixture，截图/日志留系统临时目录。
+- 验证边界：使用真实隔离 PostgreSQL/Redis 服务；模型/Brave 和导入内容仍为 synthetic mock/
+  原创 fixture，不是真实内容或模型质量验收。本轮没有真实模型/Brave/收费调用、真实 --send、
+  手动更新线上来源、生产数据内容验收或真机 iPhone 测试；没有 push、远程 PR、合并或部署。
+- Git 限制：创建 `refactor/modularize-frontend-backend` 时 .git/refs 写入被拒绝，按用户
+  要求不绕过。**截至首次交付时仍 main / 9b513dc，0 Commit，所有任务改动未暂存**；
+  后续正式授权与完成记录见上方 2026-11-01 条目。
+  前端、AI、新闻、文档四组精确暂存/提交命令及英文 PR 草稿见 REFACTOR_REVIEW.md。
+  不能把工作区实现完成说成阶段提交完成；有权限终端创建专用分支后再提交与评审。
+- 剩余：真实 Relay/质量/费用、公开部署、生产 AI 环境变量/超时和 iPhone 真机验收保持原边界；
+  未运行远端 CI。没有额外数据库结构、业务需求或视觉变更。
+
+
 ## Relay 显式输出契约改进（2026-10-27，仅模拟验证通过）
 
 - 用户补充真实 `debug_relay --send` 证据：stop、正文是带 Markdown JSON 围栏的

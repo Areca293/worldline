@@ -8,7 +8,8 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from news.catalog import FEEDS
-from news.feeds import FeedError, canonical_url, fetch_feed, import_feed, parse_entries
+from news.feeds import canonical_url, fetch_feed, import_feed, parse_entries
+from news.import_support import FeedError
 from news.models import Article, Source, Topic
 
 

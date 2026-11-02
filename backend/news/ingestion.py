@@ -5,7 +5,8 @@ import logging
 from django.db import DatabaseError, connection, transaction
 from django.utils import timezone
 
-from .feeds import FeedError, fetch_feed, import_feed
+from .feeds import fetch_feed, import_feed
+from .import_support import FeedError
 from .models import FeedRun, Source
 
 logger = logging.getLogger(__name__)

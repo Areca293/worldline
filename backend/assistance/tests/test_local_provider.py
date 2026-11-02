@@ -7,17 +7,18 @@ import pytest
 import urllib3
 
 from assistance import providers, services
-from assistance.providers import AssistanceError
+from assistance.providers import configuration, prompts, transport
+from assistance.providers.errors import AssistanceError
 from assistance.tests.test_assistance import ANSWER, EVIDENCE
 
 
 def test_stopped_local_server_is_unavailable_not_timeout():
-    with patch("assistance.providers.urllib3.PoolManager") as pool:
+    with patch("assistance.providers.transport.urllib3.PoolManager") as pool:
         pool.return_value.request.side_effect = urllib3.exceptions.NewConnectionError(
             None, "refused"
         )
         with pytest.raises(AssistanceError, match="provider_unavailable") as error:
-            providers.request_json("POST", "http://127.0.0.1:1235/v1/chat/completions", {})
+            transport.request_json("POST", "http://127.0.0.1:1235/v1/chat/completions", {})
         assert error.value.status == 503
 
 
@@ -53,7 +54,7 @@ def reply(content=None, finish="stop", **message):
 def test_local_contract_without_openai_key(local):
     assert services.capabilities() == {"web_search": False, "answers": False, "reading_help": True}
     with patch(
-        "assistance.providers.request_json",
+        "assistance.providers.transport.request_json",
         return_value=reply(reasoning_content="private thinking"),
     ) as request:
         answer, usage = providers.generate("translate", "Only supplied text", EVIDENCE)
@@ -64,7 +65,7 @@ def test_local_contract_without_openai_key(local):
     assert body["model"] == "fixture-model" and body["temperature"] == 0.2
     assert body["max_tokens"] == 1200 and body["stream"] is False
     assert body["response_format"]["json_schema"]["strict"] is True
-    schema = providers.evidence_schema([1], "translate")
+    schema = prompts.evidence_schema([1], "translate")
     schema["properties"]["limitations"]["pattern"] = r"^[\x09\x0a\x0d\x20-\x7e]*$"
     assert body["response_format"]["json_schema"]["schema"] == schema
     assert "Never convert currencies" in body["messages"][0]["content"]
@@ -89,8 +90,8 @@ def test_local_contract_without_openai_key(local):
 )
 def test_local_endpoint_rejects_unapproved_destinations(local, settings, url):
     settings.LM_STUDIO_BASE_URL = url
-    assert not providers.model_configured()
-    with patch("assistance.providers.request_json") as request:
+    assert not configuration.model_configured()
+    with patch("assistance.providers.transport.request_json") as request:
         with pytest.raises(AssistanceError, match="not_configured"):
             providers.generate("summarize", "a question", EVIDENCE)
         request.assert_not_called()
@@ -99,7 +100,7 @@ def test_local_endpoint_rejects_unapproved_destinations(local, settings, url):
 @pytest.mark.parametrize("host", ["localhost", "[::1]", "host.docker.internal"])
 def test_explicit_local_hosts_supported(local, settings, host):
     settings.LM_STUDIO_BASE_URL = f"http://{host}:1234/v1/"
-    assert providers.local_endpoint() == f"http://{host}:1234/v1/chat/completions"
+    assert configuration.local_endpoint() == f"http://{host}:1234/v1/chat/completions"
 
 
 @pytest.mark.parametrize(
@@ -125,7 +126,7 @@ def test_explicit_local_hosts_supported(local, settings, host):
     ],
 )
 def test_local_incomplete_untrusted_and_malformed_output_is_not_salvaged(local, data, code):
-    with patch("assistance.providers.request_json", return_value=data):
+    with patch("assistance.providers.transport.request_json", return_value=data):
         with pytest.raises(AssistanceError, match=code):
             providers.generate("summarize", "a question", EVIDENCE)
 
@@ -134,7 +135,7 @@ def test_missing_usage_and_optional_local_auth(local, settings):
     settings.LM_STUDIO_API_KEY = "synthetic-private-key"
     data = reply()
     data.pop("usage")
-    with patch("assistance.providers.request_json", return_value=data) as request:
+    with patch("assistance.providers.transport.request_json", return_value=data) as request:
         _, usage = providers.generate("explain", "a question", EVIDENCE)
     assert usage == {"input_tokens": None, "output_tokens": None}
     assert request.call_args.args[2]["Authorization"] == "Bearer synthetic-private-key"
@@ -142,9 +143,9 @@ def test_missing_usage_and_optional_local_auth(local, settings):
 
 def test_task_language_instructions_do_not_mix_translation_into_english_tasks():
     for mode in ("answer", "summarize", "explain"):
-        prompt = providers.instructions_for(mode)
+        prompt = prompts.instructions_for(mode)
         assert "English only" in prompt and "25亿美元" not in prompt
-    prompt = providers.instructions_for("translate")
+    prompt = prompts.instructions_for("translate")
     assert "25亿美元" in prompt and "1200万欧元" in prompt
     assert "limitations in English only" in prompt
 
