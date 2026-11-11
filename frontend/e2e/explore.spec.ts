@@ -76,6 +76,25 @@ test('scrolls desktop filters by keyboard, wheel and draggable scrollbar', async
   await page.setViewportSize({ width: 1280, height: 600 })
   await page.goto('/?type=projects')
   const sidebar = page.getByRole('complementary', { name: 'Explore filters' })
+  await expect(sidebar).toHaveAttribute('data-scroll-active', 'false')
+  await expect
+    .poll(() =>
+      sidebar.evaluate(
+        (el) =>
+          getComputedStyle(el, '::-webkit-scrollbar-thumb').backgroundColor,
+      ),
+    )
+    .toBe('rgba(0, 0, 0, 0)')
+  await sidebar.hover()
+  await expect(sidebar).toHaveAttribute('data-scroll-active', 'true')
+  await expect
+    .poll(() =>
+      sidebar.evaluate(
+        (el) =>
+          getComputedStyle(el, '::-webkit-scrollbar-thumb').backgroundColor,
+      ),
+    )
+    .toBe('rgb(136, 136, 136)')
   await sidebar.scrollIntoViewIfNeeded()
   await sidebar.focus()
   await page.keyboard.press('End')
@@ -122,6 +141,18 @@ test('aligns the home columns and hides filters without losing selection', async
     const side = (await sidebar.boundingBox())!
     expect(side.y - topbar.y - topbar.height).toBeLessThanOrEqual(25)
     expect(Math.abs(side.y + side.height - 884)).toBeLessThan(2)
+    const handle = page.getByRole('button', { name: 'Hide filters' })
+    await expect(handle.locator('svg')).toBeVisible()
+    await expect(handle).toHaveText('')
+    const button = (await handle.boundingBox())!
+    expect(
+      Math.abs(button.y + button.height / 2 - side.y - side.height / 2),
+    ).toBeLessThan(1)
+    expect(
+      Math.abs(
+        button.x + button.width / 2 - (side.x + side.width + boxes[0]!.x) / 2,
+      ),
+    ).toBeLessThan(1)
   }
   const before = page.url()
   await page.getByRole('button', { name: 'Hide filters' }).click()

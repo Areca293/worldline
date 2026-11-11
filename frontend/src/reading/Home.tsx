@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { get } from '../lib/http'
@@ -15,11 +15,6 @@ import { PageLinks, useReadingPages } from './pagination'
 
 export function Home() {
   const [filtersHidden, setFiltersHidden] = useState(false)
-  const showFilters = useRef<HTMLButtonElement>(null)
-  function hideFilters() {
-    setFiltersHidden(true)
-    requestAnimationFrame(() => showFilters.current?.focus())
-  }
   const session = useSession()
   const [params] = useSearchParams()
   const topic = params.get('topic') || ''
@@ -57,22 +52,6 @@ export function Home() {
     <div
       className={`reading-desk home-desk${filtersHidden ? ' filters-hidden' : ''}`}
     >
-      {filtersHidden && (
-        <button
-          ref={showFilters}
-          className="sidebar-toggle show-filters"
-          aria-expanded={false}
-          aria-controls="explore-sidebar"
-          onClick={() => {
-            setFiltersHidden(false)
-            requestAnimationFrame(() =>
-              document.getElementById('hide-filters')?.focus(),
-            )
-          }}
-        >
-          Show filters <span aria-hidden="true">→</span>
-        </button>
-      )}
       <section className="intro">
         <div>
           <h1>
@@ -91,39 +70,38 @@ export function Home() {
         query={query}
         onSearch={(q) => update({ q, page: '' })}
       />
-      {!filtersHidden && (
-        <ReadingSidebar onHide={hideFilters}>
-          <ExploreFilters type={type} sort={sort} update={update} />
-          <nav className="topics" aria-label="Filter by topic">
+      <ReadingSidebar
+        collapsed={filtersHidden}
+        onToggle={() => setFiltersHidden((value) => !value)}
+      >
+        <ExploreFilters type={type} sort={sort} update={update} />
+        <nav className="topics" aria-label="Filter by topic">
+          <button
+            aria-pressed={!topic}
+            className={!topic ? 'active' : ''}
+            onClick={() => update({ topic: '', page: '' })}
+          >
+            All topics <span>↗</span>
+          </button>
+          {topics.data?.map((item) => (
             <button
-              aria-pressed={!topic}
-              className={!topic ? 'active' : ''}
-              onClick={() => update({ topic: '', page: '' })}
+              key={item.slug}
+              aria-pressed={topic === item.slug}
+              className={topic === item.slug ? 'active' : ''}
+              onClick={() => update({ topic: item.slug, page: '' })}
             >
-              All topics <span>↗</span>
+              {item.name}
             </button>
-            {topics.data?.map((item) => (
-              <button
-                key={item.slug}
-                aria-pressed={topic === item.slug}
-                className={topic === item.slug ? 'active' : ''}
-                onClick={() => update({ topic: item.slug, page: '' })}
-              >
-                {item.name}
-              </button>
-            ))}
-            <span className="edition">FROM THE SOURCES</span>
-          </nav>
-          {topics.isError && (
-            <p role="status" className="filter-error">
-              Topics are unavailable.{' '}
-              <button onClick={() => void topics.refetch()}>
-                Retry topics
-              </button>
-            </p>
-          )}
-        </ReadingSidebar>
-      )}
+          ))}
+          <span className="edition">FROM THE SOURCES</span>
+        </nav>
+        {topics.isError && (
+          <p role="status" className="filter-error">
+            Topics are unavailable.{' '}
+            <button onClick={() => void topics.refetch()}>Retry topics</button>
+          </p>
+        )}
+      </ReadingSidebar>
       <div className="reading-stream">
         {articles.data?.approximate_search && articles.data.count > 0 && (
           <p className="search-feedback" role="status">

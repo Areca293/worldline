@@ -16,7 +16,7 @@
 | `app/Layout.tsx`、`OfflineNotice.tsx` | 页眉/页脚、跳过导航、路由变化滚动复位、联网提示；调用 AccountNav 和 ConnectionStatus |
 | `reading/Home.tsx` | URL 筛选、话题和文章查询、首页重点内容、近似提示与跨领域展示；调用 ArticleCard、分页、SourceUpdates、DailyQuote |
 | `reading/ExploreFilters.tsx` | readExplore 解析类型与旧 sort 链接，呈现两段类型选择和项目排序；只通过 Home 的 URL updater 修改状态，不发请求 |
-| `reading/ReadingSidebar.tsx` | 首页侧栏容器，根据窗口与当前位置计算可用高度，监听尺寸变化，保留原生滚动；渲染隐藏按钮，显隐状态与焦点交接由 Home 管理 |
+| `reading/ReadingSidebar.tsx` | 首页侧栏容器，根据窗口与当前位置计算可用高度，监听尺寸变化，保留原生滚动；在独立分界线上渲染 SVG 折叠按钮；Home 管理显隐状态，同一按钮保留焦点，侧栏操作时显示滑块，闲置 1.4 秒后隐藏 |
 | `reading/Detail.tsx` | 按 slug 与账号查询文章，展示元信息、日期、来源范围、收藏及 ReadingAssistance |
 | `reading/ArticleCard.tsx` | 文章卡片、Metadata、TopicTag；卡片复用于首页/收藏，标签复用于详情；依赖 RepositoryStats 和 BookmarkButton |
 | `reading/SearchStories.tsx`、`pagination.tsx` | 首页与收藏复用的站内搜索、URL 分页 Hook、数量和页码控件；首页移除数量控件，收藏页保留；没有第二套分页 |
@@ -185,4 +185,4 @@ PageSize 仍被 SavedStories 使用，因此只移除首页调用，不删除共
 新增浏览器用例在 e2e/explore.spec.ts，复用后端 test_browser 的隔离数据库和禁用真实 AI
 设置。测试数据、模拟模型响应与本地已有数据库的只读目视检查分别记录在 PROGRESS。
 
-首页 home-desk 网格将侧栏放在顶栏下的左列；标语、站内搜索、结果、来源更新和名句共享右列。隐藏筛选时退回单列，URL 查询状态不变；手机保留标语、搜索、筛选、结果的顺序。
+首页 home-desk 网格将侧栏放在顶栏下的左列；标语、站内搜索、结果、来源更新和名句共享右列。隐藏筛选时保留窄分界线与展开箭头，URL 查询状态不变；手机保留标语、搜索、筛选、结果的顺序。

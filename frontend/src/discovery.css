@@ -259,31 +259,87 @@
 .home-desk > .intro {
   padding-top: 0;
 }
-.home-desk > .reading-tools {
+.home-desk > .sidebar-frame {
   grid-column: 1;
   grid-row: 1 / span 5;
 }
 .home-desk .reading-options {
   order: initial;
 }
-.sidebar-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 44px;
-  padding: 10px 12px;
-  margin-bottom: 20px;
-  background: var(--paper);
+/* The handle stays on the divider while the contents scroll independently. */
+.sidebar-frame {
+  position: sticky;
+  top: 16px;
+  min-width: 0;
+}
+.sidebar-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -16px;
+  width: 1px;
+  background: var(--line);
+}
+.sidebar-frame .reading-tools {
+  position: static;
+  height: 100%;
+  max-height: 100%;
+  --sidebar-thumb: transparent;
+}
+.sidebar-frame .reading-tools[hidden] {
+  display: none;
+}
+.sidebar-frame .reading-tools[data-scroll-active='true'] {
+  --sidebar-thumb: #888;
+}
+.sidebar-frame .reading-tools::-webkit-scrollbar-thumb {
+  background-color: var(--sidebar-thumb);
+  border-color: transparent;
+  background-clip: padding-box;
+}
+.sidebar-frame .reading-tools::-webkit-scrollbar-track {
+  background: transparent;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .sidebar-frame .reading-tools {
+    scrollbar-color: var(--sidebar-thumb) transparent;
+  }
+}
+.sidebar-frame .sidebar-toggle {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: -38px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+.sidebar-frame .sidebar-toggle:hover {
   color: var(--ink);
-  font: 13px/1.5 var(--mono);
-  flex-shrink: 0;
+}
+.sidebar-frame .sidebar-toggle::before {
+  content: '';
+  position: absolute;
+  inset: 0 8px;
+  border-radius: 8px;
+  background: var(--paper);
+}
+.sidebar-frame .sidebar-toggle svg {
+  position: relative;
+}
+.sidebar-frame .sidebar-toggle:hover::before {
+  background: var(--raised);
 }
 .reading-desk.home-desk.filters-hidden {
-  display: block;
-}
-.show-filters {
-  width: fit-content;
+  grid-template-columns: 12px minmax(0, 1fr);
 }
 @media (max-width: 800px) {
   .reading-desk.home-desk {
@@ -294,10 +350,25 @@
   .home-desk > * {
     width: 100%;
   }
-  .home-desk > .show-filters {
-    width: fit-content;
-  }
-  .home-desk > .reading-tools {
+  .home-desk > .sidebar-frame {
+    position: relative;
+    top: auto;
     height: auto;
+    padding-right: 44px;
+    margin-bottom: 20px;
+  }
+  .sidebar-frame::after {
+    right: 22px;
+  }
+  .sidebar-frame .reading-tools {
+    height: auto;
+    max-height: none;
+    margin-bottom: 0;
+  }
+  .sidebar-frame .sidebar-toggle {
+    right: 0;
+  }
+  .home-desk > .sidebar-frame.is-collapsed {
+    height: 56px;
   }
 }
