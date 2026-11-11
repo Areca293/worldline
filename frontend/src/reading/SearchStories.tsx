@@ -4,10 +4,12 @@ export function SearchStories({
   query,
   onSearch,
   saved = false,
+  projects = false,
 }: {
   query: string
   onSearch: (value: string) => void
   saved?: boolean
+  projects?: boolean
 }) {
   const [draft, setDraft] = useState(query)
   return (
@@ -20,7 +22,11 @@ export function SearchStories({
       }}
     >
       <label htmlFor="story-query">
-        {saved ? 'Search saved stories' : 'Search stories'}
+        {saved
+          ? 'Search saved stories'
+          : projects
+            ? 'Search projects'
+            : 'Search stories'}
       </label>
       <div className="search-controls">
         <input
@@ -51,7 +57,7 @@ export function SearchStories({
       <p id="search-scope">
         {saved
           ? 'Search titles and excerpts in your collection.'
-          : 'Search collected titles, descriptions and publisher names.'}
+          : `Search only ${projects ? 'projects' : 'stories'} collected by Worldline.`}
       </p>
       {query.length > 200 && <p role="alert">Use at most 200 characters.</p>}
     </form>

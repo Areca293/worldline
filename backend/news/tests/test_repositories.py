@@ -167,3 +167,31 @@ def test_github_download_uses_fixed_host_accept_and_does_not_follow_redirects():
         assert request.call_args.kwargs["headers"]["Accept"] == "application/vnd.github+json"
         assert request.call_args.kwargs["redirect"] is False
         assert "pushed" in request.call_args.args[1]
+
+
+def test_content_type_filters_before_search_and_pagination(source):
+    import_feed(source, payload())
+    for n in range(3):
+        Article.objects.create(
+            title=f"Agent story {n}",
+            source=source,
+            topic=source.topic,
+            original_url=f"https://example.com/type/{n}",
+            summary="Original test fixture",
+        )
+    client = APIClient()
+    base = {"q": "Agent", "topic": source.topic.slug, "page_size": 1}
+    for page in (1, 2, 3):
+        result = client.get("/api/articles/", {**base, "type": "stories", "page": page}).json()
+        assert result["count"] == 3
+        assert result["results"][0]["repository"] is None
+    projects = client.get("/api/articles/", {**base, "type": "projects"}).json()
+    assert projects["count"] == 1
+    assert projects["results"][0]["repository"] is not None
+    assert client.get("/api/articles/", base).json()["count"] == 4
+    assert client.get("/api/articles/", {**base, "sort": "stars"}).json()["count"] == 1
+    assert (
+        client.get("/api/articles/", {**base, "type": "stories", "sort": "growth"}).json()["count"]
+        == 3
+    )
+    assert client.get("/api/articles/", {"type": "invalid"}).status_code == 400

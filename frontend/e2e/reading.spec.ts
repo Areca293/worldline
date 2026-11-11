@@ -137,8 +137,10 @@ test('registers a reader, keeps the session after reload and can sign in again',
 test('changes page numbers and sizes, preserves them on reload, and shows all stories', async ({
   page,
 }, testInfo) => {
-  await page.goto('/')
-  await page.getByLabel('Stories per page', { exact: true }).selectOption('10')
+  await page.goto('/?page_size=10')
+  await expect(
+    page.getByLabel('Stories per page', { exact: true }),
+  ).toHaveCount(0)
   await expect(page.locator('article')).toHaveCount(10)
   await page.getByRole('button', { name: 'Page 2', exact: true }).click()
   await expect(page).toHaveURL(/page=2/)
@@ -149,23 +151,17 @@ test('changes page numbers and sizes, preserves them on reload, and shows all st
     page.getByRole('heading', { name: 'Browser test story', exact: true }),
   ).toHaveCount(0)
   await page.reload()
-  await expect(
-    page.getByLabel('Stories per page', { exact: true }),
-  ).toHaveValue('10')
+  await expect(page).toHaveURL(/page_size=10/)
   await expect(
     page.getByRole('button', { name: 'Page 2', exact: true }),
   ).toHaveAttribute('aria-current', 'page')
-  await page
-    .getByLabel('Stories per page', { exact: true })
-    .selectOption('custom')
-  await page.getByLabel('Custom stories per page').fill('7')
-  await page.getByRole('button', { name: 'Apply', exact: true }).click()
+  await page.goto('/?page_size=7')
   await expect(page.locator('article')).toHaveCount(7)
   await expect(
     page.getByRole('button', { name: 'Page 1', exact: true }),
   ).toHaveAttribute('aria-current', 'page')
   await page.getByRole('button', { name: 'Music', exact: true }).click()
-  await expect(page.getByLabel('Custom stories per page')).toHaveValue('7')
+  await expect(page).toHaveURL(/page_size=7/)
   await expect(page.locator('article')).toHaveCount(7)
   await page.getByRole('button', { name: 'Page 2', exact: true }).click()
   await expect(
@@ -183,15 +179,13 @@ test('changes page numbers and sizes, preserves them on reload, and shows all st
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true)
-  await page.getByLabel('Stories per page', { exact: true }).selectOption('all')
+  await page.goto('/?topic=music&page_size=all')
   await expect(page.locator('article')).toHaveCount(25)
   await expect(
     page.getByRole('navigation', { name: 'Article pages' }),
   ).toHaveCount(0)
   await page.reload()
-  await expect(
-    page.getByLabel('Stories per page', { exact: true }),
-  ).toHaveValue('all')
+  await expect(page).toHaveURL(/page_size=all/)
   await expect(page.locator('article')).toHaveCount(25)
 })
 

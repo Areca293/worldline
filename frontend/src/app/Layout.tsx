@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { AccountNav } from '../account/AccountNav'
 import { ConnectionStatus } from '../sources/SourceStatus'
 import { OfflineNotice } from './OfflineNotice'
@@ -20,6 +20,12 @@ export function Layout({ children }: { children: ReactNode }) {
           <Link className="brand" to="/" aria-label="Worldline home">
             WORLDLINE
           </Link>
+          <nav className="business-nav" aria-label="Reading and research">
+            <NavLink to="/bookmarks">Saved stories</NavLink>
+            <NavLink className="research-entry" to="/research">
+              Web research <span aria-hidden="true">↗</span>
+            </NavLink>
+          </nav>
           <div className="header-right">
             <AccountNav />
           </div>

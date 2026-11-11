@@ -1,5 +1,70 @@
 # 实际进度
 
+## 分界线 SVG 折叠按钮与闲置滑块（2026-11-11）
+
+- 按用户纠正，移除可见 Hide/Show filters 文字按钮；改用左右分界线垂直中部的 SVG
+  箭头，随折叠状态切换方向。同一个按钮保持键盘焦点，保留英文 aria-label/expanded。
+- ReadingSidebar 分为 sticky 外框、独立滚动内容与分界线按钮；折叠仅隐藏内容，保留
+  窄轨和展开箭头，筛选 URL 与滚动位置不丢失。首页其他业务、导航和 API 未变。
+- 原生滑块在侧栏指针移动、滚动、键盘及焦点操作时显示，约 1.4 秒无操作后透明隐藏；
+  拖动时保持显示。保留 scrollbar gutter，隐藏时不改变内容宽度，也不隐藏折叠箭头。
+- npm test **47 passed**、build 通过；Chrome 隔离浏览器验收 **1 passed、309 deselected**
+  （内部 39 passed，手机跳过桌面专属滑块用例）。增加 SVG 无文字、分界线中心坐标、
+  闲置透明/交互恢复颜色断言；原拖动/键盘/筛选/登录流程仍通过。
+- 已目视检查实际 Chrome 展开、折叠、闲置及 390px 手机截图；不改后端，无真实付费请求，
+  未部署或推送。Firefox/Safari 原生滚动条和物理触控板未单独验收。
+
+
+## 首页左右分区与侧栏隐藏（2026-11-11）
+
+- 延续 refactor/navigation-explore，基线 694fb16，开始时工作区干净。
+  上次侧栏修复已独立提交 694fb16：只增加可用视口高度测量，使首屏内部滑块可见。
+- 本次按截图反馈将首页网格提升到标语/搜索层：左侧栏从顶栏下方开始占用可用高度；
+  右侧标语、搜索、内容流、来源与名句共用同一列。顶栏、API、筛选排序和搜索逻辑未变。
+- 新增 Hide filters / Show filters；隐藏后内容扩展，重新展开保留 URL 筛选，键盘焦点
+  交接到对应按钮。显隐为当前页面状态，刷新恢复展开；未新增持久化偏好。
+- 手机保留标语 → 搜索 → 筛选 → 内容顺序；侧栏使用原生滚轮/键盘/可拖动滑块。
+- 实测 npm test **47 passed**，npm run build 通过；Chrome 隔离验收 **1 passed、309
+  deselected**（内部 39 passed，手机跳过 1 个桌面专属滑块场景）。新增对齐、隐藏展开、
+  焦点和筛选保留检查。初次浏览器运行两个旧布局断言失败，更新为结果流边界并等待
+  resize 完成后全套通过。320/390/1280px 与隐藏状态截图已目视检查，无横向溢出。
+- 未更改后端，未重跑后端默认/Ruff/Redis 套件；无真实模型调用、部署、push 或远端 CI。
+  物理 iPhone/Safari 与触控板仍未验证。ARCHITECTURE 已同步侧栏与首页布局职责。
+
+
+## 导航与 Explore 重构（2026-11-11）
+
+- 基线核实：干净 main / d24b30b。从当前基线创建 refactor/navigation-explore；普通沙箱
+  .git 写入受限，经正式 require_escalated 授权成功。本轮按 API、前端、文档阶段提交，
+  未 push、创建远程 PR、合并或部署。未修改 .env、忽略规则、依赖、模型与迁移。
+- 全站 Layout 统一业务导航，Saved stories 从账号区移出，Web research 独立强调且手机首屏
+  可见。AccountNav 保留账号加载、重试、登录注册、标识和退出；原登录返回流程保持。
+- 首页默认 Stories，只展示资讯；Projects 默认 Most stars，单独提供 Star growth。
+  SearchStories 随模式标注站内范围；研究页仍显式提交，不自动外部检索。
+- 新增可选 API type，在主题/关键词搜索及分页前筛选 Repository 是否存在；省略 type
+  仍兼容原混合 API。旧 sort=stars/growth URL 恢复 Projects，显式 stories 优先。
+  查询键包含 type；筛选/排序回第一页，保留 topic/q/page_size；刷新与历史导航恢复状态。
+- 首页移除 Stories per page 调用，保留分页、page_size 链接和收藏页控件。侧栏 DOM 顺序为
+  Explore、项目排序、主题；桌面保留独立原生滚动与清晰滑块，手机控件在结果前排列。
+- 使用 design-taste-frontend 的现有界面审查流程，按用户要求保留字体、深色和内容卡片。
+  已检查本地实际运行页面的改造前/后截图；320/390/1280px 无横向溢出。未访问「读满280」。
+  实际库只作只读页面检查，隔离 browser fixture 和模拟供应商响应不冒充实际内容。
+- 最终验证：npm test **47 passed**；npm run build 通过；Django check 0 issues；Ruff
+  check/format（85 文件）通过；默认 pytest **308 passed、2 deselected**，真实隔离 PostgreSQL。
+  E2E_BROWSER_CHANNEL=chrome uv run pytest -m browser -q **1 passed、309 deselected**；
+  内部 **37 passed、1 skipped**（手机项目跳过桌面专属滚动条测试）。覆盖访客/登录、收藏、
+  两种站内搜索、研究入口、Projects 两种排序及增长空状态、键盘、滚轮、滑块拖动、分页、
+  旧链接、刷新和浏览器前进后退；原模拟研究流程继续验证引用与失败，不发生真实付费调用。
+- 开发中首次 Vitest 因旧空状态文字断言失败，更新对应预期后通过；浏览器前两轮仅滑块
+  拖动失败，定位到 Playwright 默认 --hide-scrollbars，配置移除此无头参数后完整通过。
+  手机截图发现旧样式覆盖筛选布局，已修正作用域优先级并复核；没有通过跳过失败来交付。
+- 环境边界：普通沙箱 localhost 监听受限，正式授权后发现现有前后端已运行，复用现有
+  页面并使用隔离测试服务验收。CUA Chrome 连接超时，改用 Playwright Chrome 检查截图。
+- 未验证：物理触控板、真实 iPhone/Safari、真实 AI/Brave 质量与费用、生产部署和远端 CI。
+  Redis/Celery 未重跑，本轮没有任务调度变更。设置系统中的分页偏好属于下一版本。
+  历史记录保留，架构和 PR 草稿见 ARCHITECTURE.md / NAVIGATION_EXPLORE_REVIEW.md。
+
+
 ## 重构阶段提交恢复完成（2026-11-01）
 
 - 用户要求重试 Git 权限后，普通沙箱写 .git/refs 仍失败；通过正式 require_escalated

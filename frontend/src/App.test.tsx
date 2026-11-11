@@ -45,7 +45,7 @@ it('shows an empty state instead of inserting fake stories', async () => {
     })),
   )
   mount()
-  expect(await screen.findByText('A fresh page.')).toBeVisible()
+  expect(await screen.findByText('No stories yet.')).toBeVisible()
   expect(
     screen.queryByText('A closer look at the ideas shaping our digital world'),
   ).not.toBeInTheDocument()

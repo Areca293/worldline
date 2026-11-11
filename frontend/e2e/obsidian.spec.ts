@@ -80,6 +80,12 @@ test('keeps sidebar controls reachable independently and source expansion out of
     await page
       .locator('.reading-tools')
       .evaluate((el) => el.scrollIntoView({ block: 'start' }))
+    await expect
+      .poll(async () => {
+        const side = (await page.locator('.reading-tools').boundingBox())!
+        return side.y + side.height
+      })
+      .toBeLessThanOrEqual(650)
     const before = await page.evaluate(() => scrollY)
     await page.getByRole('button', { name: 'Security', exact: true }).focus()
     const box = await page
@@ -93,7 +99,7 @@ test('keeps sidebar controls reachable independently and source expansion out of
   }
   await page.getByText('Source updates', { exact: true }).click()
   const source = await page.locator('.source-updates').boundingBox()
-  const stream = await page.locator('.reading-desk').boundingBox()
+  const stream = await page.locator('.reading-stream').boundingBox()
   expect(source!.y).toBeGreaterThanOrEqual(stream!.y + stream!.height)
   await page.screenshot({
     path: testInfo.outputPath('expanded-source-panel.png'),

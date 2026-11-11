@@ -54,26 +54,3 @@ export function RepositoryStats({
     </div>
   )
 }
-
-export function DiscoveryOrder({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <div className="discovery-order">
-      <label htmlFor="discovery-order">Explore</label>
-      <select
-        id="discovery-order"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        <option value="">Stories & projects</option>
-        <option value="stars">Projects: most stars</option>
-        <option value="growth">Projects: star growth</option>
-      </select>
-    </div>
-  )
-}
