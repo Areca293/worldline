@@ -31,6 +31,15 @@ def discover_articles(user, params):
     sort = params.get("sort", "")
     if sort not in {"", "stars", "growth"}:
         raise ValidationError({"sort": "Choose stars or growth, or leave sort empty."})
+    content_type = params.get("type", "")
+    if content_type not in {"", "stories", "projects"}:
+        raise ValidationError({"type": "Choose stories or projects, or leave type empty."})
+    if content_type == "stories":
+        articles = articles.filter(repository__isnull=True)
+        sort = ""
+    elif content_type == "projects":
+        articles = articles.filter(repository__isnull=False)
+        sort = sort or "stars"
     if sort:
         articles = articles.filter(repository__isnull=False)
         if sort == "growth":
