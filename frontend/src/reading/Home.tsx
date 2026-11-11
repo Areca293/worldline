@@ -6,6 +6,7 @@ import { useSession } from '../account/session'
 import { ArticleCard } from './ArticleCard'
 import { Notice } from '../ui/ContentNotice'
 import { ExploreFilters, readExplore } from './ExploreFilters'
+import { ReadingSidebar } from './ReadingSidebar'
 import { SearchStories } from './SearchStories'
 import { SourceUpdates } from '../sources/SourceStatus'
 import { DailyQuote } from '../quotes/DailyQuote'
@@ -66,11 +67,7 @@ export function Home() {
         onSearch={(q) => update({ q, page: '' })}
       />
       <div className="reading-desk">
-        <aside
-          className="reading-tools"
-          aria-label="Explore filters"
-          tabIndex={0}
-        >
+        <ReadingSidebar>
           <ExploreFilters type={type} sort={sort} update={update} />
           <nav className="topics" aria-label="Filter by topic">
             <button
@@ -100,7 +97,7 @@ export function Home() {
               </button>
             </p>
           )}
-        </aside>
+        </ReadingSidebar>
         <div className="reading-stream">
           {articles.data?.approximate_search && articles.data.count > 0 && (
             <p className="search-feedback" role="status">
