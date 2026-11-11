@@ -1,6 +1,6 @@
 # Worldline 架构与维护指南
 
-更新：2026-10-31。以当前源码为准；历史里程碑的验收边界见 `PROGRESS.md`。
+更新：2026-11-11。以当前源码为准；历史里程碑的验收边界见 `PROGRESS.md`。
 本项目仍是 React 客户端 + Django 模块化单体，PostgreSQL 保存业务数据，Redis
 用于 Celery broker 和生产限流。没有新增框架、数据库表或依赖。
 
@@ -15,10 +15,11 @@
 | `App.tsx` | 组合 Layout 和原有七条 Route（含兜底）；按原顺序加载 assistance/discovery 样式 |
 | `app/Layout.tsx`、`OfflineNotice.tsx` | 页眉/页脚、跳过导航、路由变化滚动复位、联网提示；调用 AccountNav 和 ConnectionStatus |
 | `reading/Home.tsx` | URL 筛选、话题和文章查询、首页重点内容、近似提示与跨领域展示；调用 ArticleCard、分页、SourceUpdates、DailyQuote |
+| `reading/ExploreFilters.tsx` | readExplore 解析类型与旧 sort 链接，呈现两段类型选择和项目排序；只通过 Home 的 URL updater 修改状态，不发请求 |
 | `reading/Detail.tsx` | 按 slug 与账号查询文章，展示元信息、日期、来源范围、收藏及 ReadingAssistance |
 | `reading/ArticleCard.tsx` | 文章卡片、Metadata、TopicTag；卡片复用于首页/收藏，标签复用于详情；依赖 RepositoryStats 和 BookmarkButton |
-| `reading/SearchStories.tsx`、`pagination.tsx` | 首页与收藏复用的站内搜索、URL 分页 Hook、数量和页码控件；迁移原实现，没有第二套分页 |
-| `reading/repositories.tsx`、`types.ts` | GitHub Star/实测增长展示、排序控件；文章/分类/分页 API 类型归阅读领域 |
+| `reading/SearchStories.tsx`、`pagination.tsx` | 首页与收藏复用的站内搜索、URL 分页 Hook、数量和页码控件；首页移除数量控件，收藏页保留；没有第二套分页 |
+| `reading/repositories.tsx`、`types.ts` | GitHub Star/实测增长展示；文章/分类/分页 API 类型归阅读领域 |
 | `account/session.ts`、`types.ts` | Session 查询与账号切换后的查询取消/清除；供导航、页面、收藏和 AI 使用 |
 | `account/Login.tsx`、`Register.tsx`、`AccountNav.tsx` | 独立登录/注册页面及退出导航；复用 session、redirect、feedback，无通用表单框架 |
 | `account/redirect.ts`、`feedback.ts` | 登录/注册相同的安全 next 规则；原账号相关失败文案也供收藏使用，保留已有错误语义 |
@@ -132,7 +133,7 @@ execute 先计算原 HMAC（提示版本、任务、输入、完整模型配置�
 用户 PostgreSQL session advisory lock。缓存按用户查询，命中不 reserve、不新增 UsageEvent；
 未命中先在事务中按 global → user 的顺序预留额度，再调用供应商，finally 写使用量并释放锁。
 失败尝试计额度；未知 token 保持未知。Reading TTL=86400，Web TTL 由原设置控制。
-本轮只改变导入路径，没有改变以上锁、连接生命周期、原子性或 HMAC 输入。
+2026-10-31 的模块重构只改变导入路径；本轮 UI 改造也未改变以上锁、连接生命周期、原子性或 HMAC 输入。
 
 Research 按账号重挂载；Reading Help 按账号与文章 ID 重挂载，清除问题/模式/答案。
 Mutation 不自动重试，gcTime=0，成功或失败都刷新额度；请求中/失败时不显示旧成功答案。
@@ -156,4 +157,29 @@ Mutation 不自动重试，gcTime=0，成功或失败都刷新额度；请求中
   放 import_support，特定来源规则留适配器。不要将不同语义的 URL/文本检查合并。
 - 公共基础设施应有明确多方使用者；不新增包罗万象的 utils、Repository 层或复杂 DI。
 
-本轮验证、可回退提交分组与英文 PR 草稿见 [重构交付记录](REFACTOR_REVIEW.md)。
+2026-10-31 模块重构记录见 [重构交付记录](REFACTOR_REVIEW.md)；本轮导航更新见 [导航交付记录](NAVIGATION_EXPLORE_REVIEW.md)。
+
+
+## 导航与 Explore 更新（2026-11-11）
+
+目录仍按上表组织，未进行第二次大规模模块搬迁。Layout 在全站统一组合 WORLDLINE、
+Reading and research 业务导航和 AccountNav。Saved stories/Web research 不再属于账号模块；
+AccountNav 仅处理会话加载、重试、登录注册、账号标识和退出。
+
+首页链路：URL → readExplore → Home 的 Query key/GET articles → ArticleList →
+discover_articles → search_articles → ReadingPagination → ArticleCard。
+类型、主题、关键词、排序、页码和 page_size 全部进入 URL 或查询键；变更筛选会清除页码。
+没有 type 时，首页默认 stories；旧 sort=stars/growth 链接恢复 projects；显式 stories
+优先于旧排序。进入 Projects 默认 stars，离开后再次进入也使用 stars。
+
+API 新增可选 type=stories|projects；省略仍保留原混合列表行为。类型与主题在搜索及分页
+前过滤；stories 排除 Repository，忽略有效项目排序；projects 默认 stars。无效 type/sort
+返回英文 400。沿用既有近似搜索、排序和实测增长可比性，不修改模型、迁移或导入。
+
+SearchStories 复用表单并按 stories/projects/saved 显示范围。Research 仍经原 requests
+Mutation 显式 POST；首页输入、类型选择与研究页导航不触发外部检索。
+PageSize 仍被 SavedStories 使用，因此只移除首页调用，不删除共享控件或 page_size 解析。
+旧 DiscoveryOrder 及其无调用方 CSS 删除；RepositoryStats 保留原职责。
+
+新增浏览器用例在 e2e/explore.spec.ts，复用后端 test_browser 的隔离数据库和禁用真实 AI
+设置。测试数据、模拟模型响应与本地已有数据库的只读目视检查分别记录在 PROGRESS。
