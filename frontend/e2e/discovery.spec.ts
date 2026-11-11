@@ -3,14 +3,13 @@ import { expect, test } from '@playwright/test'
 test('searches collected stories with URL pagination and clear empty states', async ({
   page,
 }, testInfo) => {
-  await page.goto('/')
+  await page.goto('/?page_size=10')
   await page.getByRole('searchbox', { name: 'Search stories' }).fill('archive')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(
-    page.getByRole('heading', { name: 'Search results' }),
+    page.getByRole('heading', { name: 'Search stories results' }),
   ).toBeVisible()
   await expect(page.getByText('24 matching stories')).toBeVisible()
-  await page.getByLabel('Stories per page', { exact: true }).selectOption('10')
   await page.getByRole('button', { name: 'Page 2', exact: true }).click()
   await expect(
     page.getByRole('button', { name: 'Page 2', exact: true }),

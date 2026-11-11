@@ -5,17 +5,18 @@ import type { Topic, ArticlePage } from './types'
 import { useSession } from '../account/session'
 import { ArticleCard } from './ArticleCard'
 import { Notice } from '../ui/ContentNotice'
-import { DiscoveryOrder } from './repositories'
+import { ExploreFilters, readExplore } from './ExploreFilters'
 import { SearchStories } from './SearchStories'
 import { SourceUpdates } from '../sources/SourceStatus'
 import { DailyQuote } from '../quotes/DailyQuote'
-import { PageLinks, PageSize, useReadingPages } from './pagination'
+import { PageLinks, useReadingPages } from './pagination'
 
 export function Home() {
   const session = useSession()
   const [params] = useSearchParams()
   const topic = params.get('topic') || ''
-  const sort = params.get('sort') || ''
+  const { type, sort } = readExplore(params)
+  const projects = type === 'projects'
   const query = (params.get('q') || '').trim()
   const { page, size, update } = useReadingPages()
   const topics = useQuery({
@@ -27,6 +28,7 @@ export function Home() {
       'articles',
       session.data?.user?.id ?? null,
       topic,
+      type,
       sort,
       page,
       size,
@@ -34,7 +36,7 @@ export function Home() {
     ],
     queryFn: ({ signal }) =>
       get<ArticlePage>(
-        `articles/?topic=${encodeURIComponent(topic)}&sort=${encodeURIComponent(sort)}&page=${page}&page_size=${size}&q=${encodeURIComponent(query)}`,
+        `articles/?type=${type}&topic=${encodeURIComponent(topic)}&sort=${encodeURIComponent(sort)}&page=${page}&page_size=${size}&q=${encodeURIComponent(query)}`,
         signal,
       ),
   })
@@ -58,12 +60,18 @@ export function Home() {
         </p>
       </section>
       <SearchStories
-        key={query}
+        key={`${type}:${query}`}
+        projects={projects}
         query={query}
         onSearch={(q) => update({ q, page: '' })}
       />
       <div className="reading-desk">
-        <aside className="reading-tools">
+        <aside
+          className="reading-tools"
+          aria-label="Explore filters"
+          tabIndex={0}
+        >
+          <ExploreFilters type={type} sort={sort} update={update} />
           <nav className="topics" aria-label="Filter by topic">
             <button
               aria-pressed={!topic}
@@ -84,17 +92,6 @@ export function Home() {
             ))}
             <span className="edition">FROM THE SOURCES</span>
           </nav>
-          <div className="reading-options">
-            <DiscoveryOrder
-              value={sort}
-              onChange={(value) => update({ sort: value, page: '' })}
-            />
-            <PageSize
-              key={size}
-              size={size}
-              onChange={(value) => update({ page_size: value, page: '' })}
-            />
-          </div>
           {topics.isError && (
             <p role="status" className="filter-error">
               Topics are unavailable.{' '}
@@ -133,15 +130,15 @@ export function Home() {
                 {sort === 'growth'
                   ? 'No comparable growth observations yet.'
                   : query
-                    ? 'No matching stories.'
-                    : 'A fresh page.'}
+                    ? `No matching ${type}.`
+                    : `No ${type} yet.`}
               </h2>
               <p>
                 {sort === 'growth'
                   ? 'Growth needs at least a day of successful observations. Try another topic or browse total stars while history builds.'
                   : query
                     ? 'Try different keywords, clear the search, or choose another topic.'
-                    : 'There are no stories in this view yet. Try another topic or come back later.'}
+                    : `There are no ${type} in this view yet. Try another topic or come back later.`}
               </p>
               {sort === 'growth' && (
                 <button
@@ -167,7 +164,7 @@ export function Home() {
                   <div className="section-heading">
                     <h2>
                       {query
-                        ? 'Search results'
+                        ? `Search ${type} results`
                         : sort
                           ? sort === 'growth'
                             ? 'Observed star growth'
@@ -175,14 +172,14 @@ export function Home() {
                           : topic
                             ? topics.data?.find((item) => item.slug === topic)
                                 ?.name || 'Stories'
-                            : 'Across your world'}
+                            : 'Stories across your world'}
                     </h2>
                     <span>
                       {query
                         ? `${articles.data?.count ?? 0} matching ${sort ? (articles.data?.count === 1 ? 'project' : 'projects') : articles.data?.count === 1 ? 'story' : 'stories'}`
                         : sort
                           ? `${articles.data?.count ?? 0} projects`
-                          : `${rest.length} ${rest.length === 1 ? 'story' : 'stories'} to explore`}
+                          : `${articles.data?.count ?? 0} stories`}
                     </span>
                   </div>
                   {rest.map((article) => (

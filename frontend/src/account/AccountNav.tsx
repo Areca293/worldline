@@ -19,8 +19,6 @@ export function AccountNav() {
   return (
     <div className="account-area">
       <nav className="account-nav" aria-label="Your account">
-        <Link to="/research">Web research</Link>
-        <Link to="/bookmarks">Saved stories</Link>
         {session.isPending ? (
           <span>Checking account…</span>
         ) : session.isError ? (

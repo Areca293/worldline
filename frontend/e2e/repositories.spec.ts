@@ -16,23 +16,27 @@ test('explores ten topics and distinguishes measured growth from pending or stal
     page.getByRole('button', { name: 'Agents & Skills', exact: true }),
   ).toHaveAttribute('aria-pressed', 'true')
   await expect(page).toHaveURL(/topic=agents-skills/)
-  await page.getByLabel('Explore', { exact: true }).selectOption('stars')
+  await page.getByRole('button', { name: 'Projects', exact: true }).click()
   await expect(
     page.getByText('120 GitHub stars', { exact: true }),
   ).toBeVisible()
   await expect(
     page.getByText('Growth: collecting a full day of observations.'),
   ).toBeVisible()
-  await page.getByLabel('Explore', { exact: true }).selectOption('growth')
+  await page.getByRole('button', { name: 'Star growth', exact: true }).click()
   await expect(
     page.getByRole('heading', {
       name: 'No comparable growth observations yet.',
     }),
   ).toBeVisible()
   await page.getByRole('button', { name: 'Browse total stars' }).click()
-  await expect(page.getByLabel('Explore', { exact: true })).toHaveValue('stars')
+  await expect(
+    page.getByRole('button', { name: 'Most stars', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true')
   await page.reload()
-  await expect(page.getByLabel('Explore', { exact: true })).toHaveValue('stars')
+  await expect(
+    page.getByRole('button', { name: 'Most stars', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true')
   await expect(
     page.getByRole('button', { name: 'Agents & Skills', exact: true }),
   ).toHaveAttribute('aria-pressed', 'true')
@@ -43,7 +47,7 @@ test('explores ten topics and distinguishes measured growth from pending or stal
   await expect(
     page.getByText('Snapshot outdated. Growth unavailable.'),
   ).toBeVisible()
-  await page.getByLabel('Explore', { exact: true }).selectOption('growth')
+  await page.getByRole('button', { name: 'Star growth', exact: true }).click()
   await expect(page.locator('article')).toHaveCount(1)
   await expect(page.getByText('+30 stars over 24.0h')).toBeVisible()
   await page.getByRole('searchbox').fill('growing')

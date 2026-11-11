@@ -20,6 +20,8 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${port}`,
     channel: process.env.E2E_BROWSER_CHANNEL,
+    // Headless Chromium hides native scrollbars by default; test their real UI.
+    launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'] },
     trace: 'off',
     screenshot: 'only-on-failure',
   },

@@ -97,19 +97,6 @@
   margin: 16px 0;
   font-size: 14px;
 }
-.discovery-order {
-  display: grid;
-  gap: 8px;
-  font: 12px/1.5 var(--mono);
-}
-.discovery-order label {
-  color: var(--muted);
-}
-.discovery-order select {
-  width: 100%;
-  min-width: 0;
-  padding: 8px 10px;
-}
 .discovery-scope {
   color: var(--muted);
   font-size: 14px;
@@ -145,5 +132,113 @@
   }
   .source-updates {
     padding: 8px 20px;
+  }
+}
+
+.business-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: auto;
+  font: 13px/1.5 var(--mono);
+}
+.business-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+.business-nav .research-entry {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 8px;
+}
+.business-nav a[aria-current='page'] {
+  text-decoration: underline;
+}
+.filter-group {
+  display: grid;
+  gap: 8px;
+  font: 13px/1.5 var(--mono);
+}
+.filter-group > span {
+  color: var(--muted);
+}
+.segmented-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.project-order {
+  display: grid;
+  gap: 4px;
+}
+.filter-group button {
+  min-height: 44px;
+  padding: 10px 8px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+}
+.filter-group button[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--raised);
+  border-color: var(--control);
+}
+.filter-group button:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+.reading-desk .reading-tools {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+  scrollbar-gutter: stable;
+}
+.reading-tools::-webkit-scrollbar {
+  width: 12px;
+}
+.reading-tools::-webkit-scrollbar-track {
+  background: var(--paper);
+}
+.reading-tools::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 2px solid var(--paper);
+  border-radius: 8px;
+}
+@media (max-width: 1000px) {
+  .header {
+    flex-wrap: wrap;
+    padding: 12px 0;
+  }
+  .header .header-right {
+    margin-left: auto;
+  }
+  .business-nav {
+    order: 3;
+    width: 100%;
+  }
+}
+@media (max-width: 800px) {
+  .reading-tools .reading-options {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin-bottom: 16px;
+  }
+  .project-order {
+    grid-template-columns: 1fr 1fr;
+  }
+  .topics {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+@media (max-width: 520px) {
+  .header .header-right {
+    width: auto;
+    max-width: 100%;
+  }
+  .header .account-nav {
+    justify-content: flex-end;
   }
 }
