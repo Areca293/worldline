@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { get } from '../lib/http'
@@ -13,6 +14,12 @@ import { DailyQuote } from '../quotes/DailyQuote'
 import { PageLinks, useReadingPages } from './pagination'
 
 export function Home() {
+  const [filtersHidden, setFiltersHidden] = useState(false)
+  const showFilters = useRef<HTMLButtonElement>(null)
+  function hideFilters() {
+    setFiltersHidden(true)
+    requestAnimationFrame(() => showFilters.current?.focus())
+  }
   const session = useSession()
   const [params] = useSearchParams()
   const topic = params.get('topic') || ''
@@ -47,7 +54,25 @@ export function Home() {
     !topic && !query && !sort && currentPage === 1 ? items[0] : undefined
   const rest = items.filter((item) => item.id !== lead?.id)
   return (
-    <>
+    <div
+      className={`reading-desk home-desk${filtersHidden ? ' filters-hidden' : ''}`}
+    >
+      {filtersHidden && (
+        <button
+          ref={showFilters}
+          className="sidebar-toggle show-filters"
+          aria-expanded={false}
+          aria-controls="explore-sidebar"
+          onClick={() => {
+            setFiltersHidden(false)
+            requestAnimationFrame(() =>
+              document.getElementById('hide-filters')?.focus(),
+            )
+          }}
+        >
+          Show filters <span aria-hidden="true">→</span>
+        </button>
+      )}
       <section className="intro">
         <div>
           <h1>
@@ -66,8 +91,8 @@ export function Home() {
         query={query}
         onSearch={(q) => update({ q, page: '' })}
       />
-      <div className="reading-desk">
-        <ReadingSidebar>
+      {!filtersHidden && (
+        <ReadingSidebar onHide={hideFilters}>
           <ExploreFilters type={type} sort={sort} update={update} />
           <nav className="topics" aria-label="Filter by topic">
             <button
@@ -98,104 +123,104 @@ export function Home() {
             </p>
           )}
         </ReadingSidebar>
-        <div className="reading-stream">
-          {articles.data?.approximate_search && articles.data.count > 0 && (
-            <p className="search-feedback" role="status">
-              No exact matches. Showing similar spellings for “{query}”.
+      )}
+      <div className="reading-stream">
+        {articles.data?.approximate_search && articles.data.count > 0 && (
+          <p className="search-feedback" role="status">
+            No exact matches. Showing similar spellings for “{query}”.
+          </p>
+        )}
+        {(sort || ['agents-skills', 'open-source'].includes(topic)) && (
+          <details className="discovery-scope">
+            <summary>About project coverage and growth</summary>
+            <p>
+              A sample of recently active GitHub projects with identified
+              licenses. Total stars measure accumulated interest. Growth
+              compares actual observations 24–26 hours apart; new or outdated
+              observations are excluded from growth ordering.
             </p>
-          )}
-          {(sort || ['agents-skills', 'open-source'].includes(topic)) && (
-            <details className="discovery-scope">
-              <summary>About project coverage and growth</summary>
-              <p>
-                A sample of recently active GitHub projects with identified
-                licenses. Total stars measure accumulated interest. Growth
-                compares actual observations 24–26 hours apart; new or outdated
-                observations are excluded from growth ordering.
-              </p>
-            </details>
-          )}
-          {articles.isPending ? (
-            <div className="notice" role="status">
-              Gathering your reading…
+          </details>
+        )}
+        {articles.isPending ? (
+          <div className="notice" role="status">
+            Gathering your reading…
+          </div>
+        ) : articles.isError ? (
+          <Notice retry={() => void articles.refetch()} />
+        ) : items.length === 0 ? (
+          <div className="notice">
+            <h2>
+              {sort === 'growth'
+                ? 'No comparable growth observations yet.'
+                : query
+                  ? `No matching ${type}.`
+                  : `No ${type} yet.`}
+            </h2>
+            <p>
+              {sort === 'growth'
+                ? 'Growth needs at least a day of successful observations. Try another topic or browse total stars while history builds.'
+                : query
+                  ? 'Try different keywords, clear the search, or choose another topic.'
+                  : `There are no ${type} in this view yet. Try another topic or come back later.`}
+            </p>
+            {sort === 'growth' && (
+              <button
+                className="button"
+                onClick={() => update({ sort: 'stars', page: '' })}
+              >
+                Browse total stars
+              </button>
+            )}
+          </div>
+        ) : (
+          <div aria-busy={articles.isFetching}>
+            {lead && (
+              <section className="featured">
+                <div className="section-heading">
+                  <h2>In focus</h2>
+                </div>
+                <ArticleCard article={lead} lead />
+              </section>
+            )}
+            <div className="reading-layout">
+              <section className="stories">
+                <div className="section-heading">
+                  <h2>
+                    {query
+                      ? `Search ${type} results`
+                      : sort
+                        ? sort === 'growth'
+                          ? 'Observed star growth'
+                          : 'Projects by total stars'
+                        : topic
+                          ? topics.data?.find((item) => item.slug === topic)
+                              ?.name || 'Stories'
+                          : 'Stories across your world'}
+                  </h2>
+                  <span>
+                    {query
+                      ? `${articles.data?.count ?? 0} matching ${sort ? (articles.data?.count === 1 ? 'project' : 'projects') : articles.data?.count === 1 ? 'story' : 'stories'}`
+                      : sort
+                        ? `${articles.data?.count ?? 0} projects`
+                        : `${articles.data?.count ?? 0} stories`}
+                  </span>
+                </div>
+                {rest.map((article) => (
+                  <ArticleCard key={article.id} article={article} />
+                ))}
+              </section>
             </div>
-          ) : articles.isError ? (
-            <Notice retry={() => void articles.refetch()} />
-          ) : items.length === 0 ? (
-            <div className="notice">
-              <h2>
-                {sort === 'growth'
-                  ? 'No comparable growth observations yet.'
-                  : query
-                    ? `No matching ${type}.`
-                    : `No ${type} yet.`}
-              </h2>
-              <p>
-                {sort === 'growth'
-                  ? 'Growth needs at least a day of successful observations. Try another topic or browse total stars while history builds.'
-                  : query
-                    ? 'Try different keywords, clear the search, or choose another topic.'
-                    : `There are no ${type} in this view yet. Try another topic or come back later.`}
-              </p>
-              {sort === 'growth' && (
-                <button
-                  className="button"
-                  onClick={() => update({ sort: 'stars', page: '' })}
-                >
-                  Browse total stars
-                </button>
-              )}
-            </div>
-          ) : (
-            <div aria-busy={articles.isFetching}>
-              {lead && (
-                <section className="featured">
-                  <div className="section-heading">
-                    <h2>In focus</h2>
-                  </div>
-                  <ArticleCard article={lead} lead />
-                </section>
-              )}
-              <div className="reading-layout">
-                <section className="stories">
-                  <div className="section-heading">
-                    <h2>
-                      {query
-                        ? `Search ${type} results`
-                        : sort
-                          ? sort === 'growth'
-                            ? 'Observed star growth'
-                            : 'Projects by total stars'
-                          : topic
-                            ? topics.data?.find((item) => item.slug === topic)
-                                ?.name || 'Stories'
-                            : 'Stories across your world'}
-                    </h2>
-                    <span>
-                      {query
-                        ? `${articles.data?.count ?? 0} matching ${sort ? (articles.data?.count === 1 ? 'project' : 'projects') : articles.data?.count === 1 ? 'story' : 'stories'}`
-                        : sort
-                          ? `${articles.data?.count ?? 0} projects`
-                          : `${articles.data?.count ?? 0} stories`}
-                    </span>
-                  </div>
-                  {rest.map((article) => (
-                    <ArticleCard key={article.id} article={article} />
-                  ))}
-                </section>
-              </div>
-              <PageLinks
-                page={currentPage}
-                total={articles.data?.total_pages ?? 1}
-                onChange={(value) => update({ page: String(value) })}
-                label="Article pages"
-              />
-            </div>
-          )}
-        </div>
+            <PageLinks
+              page={currentPage}
+              total={articles.data?.total_pages ?? 1}
+              onChange={(value) => update({ page: String(value) })}
+              label="Article pages"
+            />
+          </div>
+        )}
       </div>
       <SourceUpdates />
       <DailyQuote />
-    </>
+    </div>
   )
 }

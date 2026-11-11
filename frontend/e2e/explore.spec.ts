@@ -103,3 +103,43 @@ test('scrolls desktop filters by keyboard, wheel and draggable scrollbar', async
     .poll(() => sidebar.evaluate((el) => el.scrollTop))
     .toBeGreaterThan(0)
 })
+
+test('aligns the home columns and hides filters without losing selection', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/?type=projects&sort=growth&topic=open-source&q=fixture')
+  await expect(page.getByText('1 matching project')).toBeVisible()
+  const sidebar = page.getByRole('complementary', { name: 'Explore filters' })
+  if (testInfo.project.name === 'desktop') {
+    const boxes = await Promise.all(
+      ['.intro', '.story-search', '.reading-stream'].map((selector) =>
+        page.locator(selector).boundingBox(),
+      ),
+    )
+    expect(Math.abs(boxes[0]!.x - boxes[1]!.x)).toBeLessThan(1)
+    expect(Math.abs(boxes[1]!.x - boxes[2]!.x)).toBeLessThan(1)
+    const topbar = (await page.locator('.header').boundingBox())!
+    const side = (await sidebar.boundingBox())!
+    expect(side.y - topbar.y - topbar.height).toBeLessThanOrEqual(25)
+    expect(Math.abs(side.y + side.height - 884)).toBeLessThan(2)
+  }
+  const before = page.url()
+  await page.getByRole('button', { name: 'Hide filters' }).click()
+  await expect(sidebar).toHaveCount(0)
+  const show = page.getByRole('button', { name: 'Show filters' })
+  await expect(show).toBeFocused()
+  await expect(
+    page.getByRole('searchbox', { name: 'Search projects' }),
+  ).toHaveValue('fixture')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('button', { name: 'Hide filters' })).toBeFocused()
+  await expect(
+    page.getByRole('button', { name: 'Star growth' }),
+  ).toHaveAttribute('aria-pressed', 'true')
+  expect(page.url()).toBe(before)
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true)
+})

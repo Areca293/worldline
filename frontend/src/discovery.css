@@ -242,3 +242,62 @@
     justify-content: flex-end;
   }
 }
+
+/* Home shares one right-hand alignment from the introduction to the results. */
+.reading-desk.home-desk {
+  padding-top: 24px;
+  row-gap: 0;
+}
+.home-desk > .intro,
+.home-desk > .story-search,
+.home-desk > .reading-stream,
+.home-desk > .source-updates,
+.home-desk > .daily-quote {
+  grid-column: 2;
+  min-width: 0;
+}
+.home-desk > .intro {
+  padding-top: 0;
+}
+.home-desk > .reading-tools {
+  grid-column: 1;
+  grid-row: 1 / span 5;
+}
+.home-desk .reading-options {
+  order: initial;
+}
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  padding: 10px 12px;
+  margin-bottom: 20px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 13px/1.5 var(--mono);
+  flex-shrink: 0;
+}
+.reading-desk.home-desk.filters-hidden {
+  display: block;
+}
+.show-filters {
+  width: fit-content;
+}
+@media (max-width: 800px) {
+  .reading-desk.home-desk {
+    display: flex;
+    flex-direction: column;
+    padding-top: 16px;
+  }
+  .home-desk > * {
+    width: 100%;
+  }
+  .home-desk > .show-filters {
+    width: fit-content;
+  }
+  .home-desk > .reading-tools {
+    height: auto;
+  }
+}

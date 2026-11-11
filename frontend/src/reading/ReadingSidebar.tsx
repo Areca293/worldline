@@ -1,7 +1,13 @@
 import { useLayoutEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 
-export function ReadingSidebar({ children }: { children: ReactNode }) {
+export function ReadingSidebar({
+  children,
+  onHide,
+}: {
+  children: ReactNode
+  onHide: () => void
+}) {
   const sidebar = useRef<HTMLElement>(null)
 
   useLayoutEffect(() => {
@@ -11,9 +17,11 @@ export function ReadingSidebar({ children }: { children: ReactNode }) {
       frame = 0
       if (getComputedStyle(element).position === 'sticky') {
         const top = Math.max(16, element.getBoundingClientRect().top)
-        element.style.maxHeight = `${Math.max(160, window.innerHeight - top - 16)}px`
+        element.style.height = `${Math.max(160, window.innerHeight - top - 16)}px`
+        element.style.maxHeight = element.style.height
       } else {
         element.style.removeProperty('max-height')
+        element.style.removeProperty('height')
       }
     }
     function schedule() {
@@ -41,11 +49,21 @@ export function ReadingSidebar({ children }: { children: ReactNode }) {
 
   return (
     <aside
+      id="explore-sidebar"
       ref={sidebar}
       className="reading-tools"
       aria-label="Explore filters"
       tabIndex={0}
     >
+      <button
+        id="hide-filters"
+        className="sidebar-toggle"
+        aria-expanded={true}
+        aria-controls="explore-sidebar"
+        onClick={onHide}
+      >
+        Hide filters <span aria-hidden="true">←</span>
+      </button>
       {children}
     </aside>
   )
